@@ -1,0 +1,76 @@
+# The core
+
+> One page. If it does not fit, the core is not clear.
+> The full derivation, the tradeoffs and every overturned conclusion live in [`FOUNDATION.md`](FOUNDATION.md).
+
+## 1. Whose machine is this
+
+The agent is the owner. The human is the constitution.
+The human does not operate. The human draws boundaries, and boundaries are written to disk.
+
+## 2. The vocabulary is closed
+
+One record type, four predicates:
+
+| `is` | what the world is |
+| `did` | what happened |
+| `may` | what the human ruled |
+| `counts` | what counts as what |
+
+Three verbs for `did`: `read` / `write` / `send`.
+Three modes for `may`: `allow` / `require` / `deny`.
+Three forms for `counts`: identity / satisfaction / representation.
+
+Nothing else. A requirement that will not translate belongs outside the core.
+
+## 3. Describe, compute, ask
+
+- **describe** → one of the four predicates
+- **compute** → a projection (a reference implementation)
+- **ask** → the map, which is the catalogue of projections
+
+A derivation is not explained, it is **reproduced**: `because = [inputs…, hash of the projection's code]`.
+A deterministic projection is a derivation. A non-deterministic one — an LLM — is a claim, and must be held to account.
+
+## 4. Boundaries
+
+**Allowed by default.** The human draws rings. Inside a ring requires approval.
+The red line is `send`: the only action that leaves your ownership, therefore the only irreversible one.
+Enforcement lives in the hand — the executor — never in the agent's good intentions.
+
+## 5. Nothing is ever modified
+
+Only a new version plus a pointer swap. So there are no locks, no torn writes, no backups, no restores, no merge conflicts.
+Two primitives: **fork** (free) and **prune** (automatic, by reachability).
+There is no global "now", only each observer's projection of one total order.
+"Back to yesterday" is not a restore, it is an as-of query.
+
+## 6. Memory
+
+Three things, never confused: the **ledger** (may be large) / a **view** (hard budget) / a **digest** (as small as possible).
+The value of process equals undecidedness.
+**Nothing enters the context on its own.** The map is the single exception, and it must fit one screen.
+
+## 7. Who may change what
+
+| Invariants | nobody |
+| No-go zones and definitions | the human only — the agent may propose, a signature makes it real |
+| Everything else | any reference implementation, replaceable at will |
+
+## 8. The agent is not ours
+
+One ABI, N thin adapters. **The seam is the adapter boundary.** MCP is an adapter, not the ABI.
+Continuity lives in the ledger, so any agent can take over — including one that has never seen this machine.
+
+## 9. What we are allowed to borrow
+
+From a kernel: **processes, memory, devices. Nothing else.**
+Target: the only foreign code in the system is `vmlinuz` and hardware firmware.
+
+## 10. What this is not
+
+Not a programming language. Not a sandbox. Not a dashboard. Not an agent framework.
+
+## 11. The test
+
+**If one real event cannot be written in four predicates within one screen, the vocabulary is wrong.**

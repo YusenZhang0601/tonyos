@@ -14,16 +14,18 @@
 ## Read these three
 
 1. This file (structure / boundaries / routing)
-2. `design/FOUNDATION.md` — **the single source of design authority**
+2. `design/CORE.md` — **the whole system on one page**
 3. `docs/STATUS.md` — where we are, what is blocked, what needs a ruling
 
 Reading only these three should be enough to start work. If it isn't, the writing is too vague.
+`design/FOUNDATION.md` is the manual: read it when you need the *why*, not to get started.
 
 ## Layout
 
 | Path | What it is | Doc type |
 |---|---|---|
 | `AGENTS.md` | Entry protocol (this file) | Reference |
+| `design/CORE.md` | The whole system on one page | Explanation |
 | `design/FOUNDATION.md` | Design authority: the base and all derivations | Explanation |
 | `docs/STATUS.md` | Current state and open rulings | Reference |
 | `docs/DECISIONS.md` | Decision log (append-only, with supersession chains) | Explanation |
