@@ -1,17 +1,15 @@
 """E3: two agents, one world. What actually happens?
 
-Three outcomes were on the table: one fails, one overwrites, or both survive by
-forking. This runs real processes against one file and reports which one happens
-— first with no compare-and-swap, then with one.
+Part A shows the unsafe path is gone: a root cannot be appended, only committed.
+Part B races two real processes through the ledger's compare-and-swap.
+Part C measures what correctness costs.
 
 Run: python3 probe/concurrent.py
 
-A forced interleaving is used (both read the root, then wait) so the race is
-reachable on a 2-core machine. That is a demonstration of a reachable schedule,
-not a measurement of how often it happens naturally.
+A forced interleaving is used (both read the head, then wait), so the race is
+reachable on a 2-core machine. That demonstrates a reachable schedule, not how
+often it happens naturally.
 """
-import fcntl
-import json
 import multiprocessing as mp
 import os
 import shutil
@@ -20,93 +18,41 @@ import tempfile
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from ledger import Ledger, NotFound          # noqa: E402
+from ledger import Ledger, Conflict, NotFound     # noqa: E402
 
 W1 = "world:lab"
 CTX = mp.get_context("fork")
 
 
-class Conflict(Exception):
-    pass
-
-
-def commit_at(path, world, files, by, expect=None):
-    """Compare-and-swap: only advance `world` if its root is still `expect`.
-
-    For a world with no root, `expect` is the parent viewpoint — that is a fork
-    (D-035), not a conflict.
-    """
-    with open(path + ".lock", "a+") as lock:
-        fcntl.flock(lock, fcntl.LOCK_EX)
-        led = Ledger(path)                       # fresh under the lock: no stale seq
-        roots = [r for r in led.active()
-                 if r["predicate"] == "is" and "root" in r["value"] and r["world"] == world]
-        if roots:
-            cur = led.current_root(world)
-            if expect is not None and cur != expect:
-                raise Conflict(f"expected {expect}, current {cur}")
-            prev = cur
-        else:
-            if expect is None:
-                raise Conflict(f"{world} has no root and no parent viewpoint")
-            prev = expect
-        did = led.append(by, "did", {"verb": "write", "view": prev,
-                                     "result": {"files": files}},
-                         world, by=by, because=[prev])
-        return led.append("world", "is", {"root": {"files": files}},
-                          world, by=by, because=[did])
+def commit_at(path, world, files, by, expect):
+    return Ledger(path).commit(world, files, by, expect)
 
 
 def seed(path):
+    return Ledger(path).bootstrap(W1, {}, by="sensor:fs")
+
+
+# ------------------------------------------------------------------ the guard
+def guard(path):
+    print("--- A · the unsafe way to advance a world")
     led = Ledger(path)
-    return led.append("world", "is", {"root": {"files": {}}}, W1, by="sensor:fs")
-
-
-# ------------------------------------------------------------------ naive race
-def _naive(args):
-    path, barrier, q, name = args
-    led = Ledger(path)
-    expect = led.current_root(W1)
-    barrier.wait()
-    time.sleep(0.05)                             # widen the window, deliberately
-    did = led.append(f"agent:{name}", "did",
-                     {"verb": "write", "view": expect,
-                      "result": {"files": {f"/{name}": "x"}}},
-                     W1, by=f"agent:{name}", because=[expect])
-    root = led.append("world", "is", {"root": {"files": {f"/{name}": "x"}}},
-                      W1, by=f"agent:{name}", because=[did])
-    q.put((name, expect, root))
-
-
-def naive_race(path):
-    print("--- A · no compare-and-swap: two processes, one world")
-    barrier, q = CTX.Barrier(2), CTX.Queue()
-    ps = [CTX.Process(target=_naive, args=((path, barrier, q, n),)) for n in ("a", "b")]
-    for p in ps:
-        p.start()
-    results = [q.get(timeout=10) for _ in ps]
-    for p in ps:
-        p.join()
-    led = Ledger(path, writable=False)
-    roots = [r for r in led.active()
-             if r["predicate"] == "is" and "root" in r["value"] and r["world"] == W1]
-    commits = [r for r in roots if r["because"]]
-    heads = {led.get(r["because"][0])["value"]["view"] for r in commits}
-    seqs = [r["seq"] for r in led.rows]
-    print(f"  both processes returned a root   : {len(results) == 2}")
-    print(f"  roots in {W1:<12}             : {len(roots)} (1 seed + {len(commits)} commits)")
-    print(f"  commits sharing one parent       : {len(heads)} parent(s) for {len(commits)} commits")
-    print(f"  duplicate sequence numbers       : {len(seqs) != len(set(seqs))}")
-    print(f"  what the screen would show       : {len(commits)} heads, silently")
+    try:
+        led.append("world", "is", {"root": {"files": {}}}, W1, by="agent:x")
+        print("  append a root                   : ACCEPTED (the guard is missing)")
+    except AssertionError as exc:
+        print(f"  append a root                   : refused — {exc}")
+    try:
+        led.commit(W1, {"/x": "1"}, "agent:x", expect="not-a-viewpoint")
+    except (Conflict, NotFound) as exc:
+        print(f"  commit with a bad head          : {type(exc).__name__} — {exc}")
 
 
 # -------------------------------------------------------------------- cas race
 def _cas(args):
     path, barrier, q, name = args
-    led = Ledger(path, writable=False)
-    expect = led.current_root(W1)
+    expect = Ledger(path, writable=False).current_root(W1)
     barrier.wait()
-    time.sleep(0.05)
+    time.sleep(0.05)                             # widen the window, deliberately
     try:
         root = commit_at(path, W1, {f"/{name}": "x"}, f"agent:{name}", expect)
         q.put((name, "ok", expect, root))
@@ -119,7 +65,7 @@ def cas_round(path, i):
     ps = [CTX.Process(target=_cas, args=((path, barrier, q, n),)) for n in ("a", "b")]
     for p in ps:
         p.start()
-    res = [q.get(timeout=10) for _ in ps]
+    res = [q.get(timeout=15) for _ in ps]
     for p in ps:
         p.join()
     ok = [r for r in res if r[1] == "ok"]
@@ -156,9 +102,10 @@ def cas_race(path, rounds=5):
 # -------------------------------------------------------------------- the cost
 def cost(path, n=5):
     print("\n--- C · what correctness costs, one world, sequential")
+    led = Ledger(path)
     t = time.perf_counter()
     for i in range(n):
-        commit_at(path, W1, {f"/c{i}": "x"}, "agent:c")
+        led.commit(W1, {f"/c{i}": "x"}, "agent:c", expect=led.current_root(W1))
     dt = time.perf_counter() - t
     print(f"  {n} commits in {dt:.2f}s          : {n/dt:.1f} commits/s "
           f"({1000*dt/n:.0f} ms each, 2 fsyncs per commit)")
@@ -168,17 +115,15 @@ def cost(path, n=5):
 def main():
     base = tempfile.mkdtemp(dir="/tmp")
     try:
-        p1 = os.path.join(base, "naive")
-        os.makedirs(p1)
-        seed(os.path.join(p1, "claims.log"))
-        naive_race(os.path.join(p1, "claims.log"))
+        p = os.path.join(base, "claims.log")
+        seed(p)
+        guard(p)
 
-        p2 = os.path.join(base, "cas")
-        os.makedirs(p2)
-        seed(os.path.join(p2, "claims.log"))
-        cas_race(os.path.join(p2, "claims.log"))
+        p2 = os.path.join(base, "cas.log")
+        seed(p2)
+        cas_race(p2)
 
-        cost(os.path.join(p2, "claims.log"))
+        cost(p2)
     finally:
         shutil.rmtree(base, ignore_errors=True)
 

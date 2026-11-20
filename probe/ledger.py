@@ -1,11 +1,17 @@
 """Append-only claim ledger.
 
-Schema after the probe's first findings:
+Schema, after the probe's findings:
   - every claim carries a `world`; only `may` / `counts` may use "*" (D-030)
   - a commit is one `did` plus one `is(world, root)`; "where it came from" is
     recorded once, in the did's view, never twice (D-032)
   - a viewpoint IS a root claim: it pins world, sequence and tree at once
+  - identity is content, not position (D-038)
+  - records are framed and checksummed; a commit is durable at fsync (D-039)
+  - reading the head, assigning the position and advancing it are ONE critical
+    section, and it lives here, not in the caller (D-040)
 """
+import contextlib
+import fcntl
 import hashlib
 import json
 import os
@@ -30,6 +36,10 @@ class NotFound(Exception):
     pass
 
 
+class Conflict(Exception):
+    """The head moved. The caller may retry or fork; it is never silent."""
+
+
 class Ledger:
     def __init__(self, path, writable=True):
         self.path = path
@@ -38,37 +48,42 @@ class Ledger:
         self.rows = []
         self.duplicates = 0
         self.truncated = 0
-        if os.path.exists(path):
-            raw = open(path, "rb").read()
-            payloads, valid = recover(raw)
-            self.rows = [json.loads(p) for p in payloads]
-            if valid < len(raw):
-                # The tail never made it, or the first bad frame starts here. Cut it
-                # and keep the fact (D-039): a lost tail must be visible, not silent.
-                # Only a writer may cut: a reader that truncates can destroy a frame
-                # another process is still writing.
-                self.truncated = len(raw) - valid
-                if writable:
-                    with open(path, "r+b") as f:
-                        f.truncate(valid)
+        self._load(truncate=writable)
 
-    # ---------------------------------------------------------------- writing
-    def append(self, subject, predicate, value, world, by, because=(), replaces=()):
+    # ------------------------------------------------------------------ storage
+    def _load(self, truncate=False):
+        """Read the file. Cutting a bad tail is only allowed under exclusive access."""
+        self.rows = []
+        if not os.path.exists(self.path):
+            return
+        raw = open(self.path, "rb").read()
+        payloads, valid = recover(raw)
+        self.rows = [json.loads(p) for p in payloads]
+        if valid < len(raw):
+            self.truncated = len(raw) - valid
+            if truncate:
+                with open(self.path, "r+b") as f:
+                    f.truncate(valid)
+
+    @contextlib.contextmanager
+    def _exclusive(self, world):
+        """One writer at a time, and a fresh view of the file inside.
+
+        The lock is per ledger, not per world: one file. A per-world lock without
+        per-world files would let two writers append to one file while a third
+        re-reads it. Sharding the log is a later step, and it needs its own probes.
+        """
         assert self.writable, "this ledger was opened read-only"
-        assert predicate in PREDICATES, f"unknown predicate {predicate}"
-        assert world and (world == "*" or isinstance(world, str)), "world is required (D-030)"
-        if predicate not in GLOBAL_OK:
-            assert world != "*", f"{predicate} must land in a concrete world (D-030)"
-        if predicate == "did":
-            assert value["verb"] in VERBS, f"unknown verb {value['verb']}"
-        if predicate == "may":
-            assert value["mode"] in MODES, f"unknown mode {value['mode']}"
-        if predicate == "counts":
-            assert value["form"] in FORMS, f"unknown form {value['form']}"
-        if predicate in HUMAN_ONLY and not by.startswith("human:"):
-            assert value.get("proposal") is True, f"{predicate} is human-written; agent may only propose"
-        # Identity is content only (D-038). Position is a property of the container,
-        # never of the name: two nodes asserting the same thing must agree on the id.
+        with open(self.path + ".lock", "a+") as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            try:
+                self._load(truncate=True)
+                yield
+            finally:
+                fcntl.flock(lock, fcntl.LOCK_UN)
+
+    def _body(self, subject, predicate, value, world, by, because, replaces):
+        # Identity is content only (D-038). Position is a property of the container.
         content = {
             "subject": subject,
             "predicate": predicate,
@@ -78,22 +93,115 @@ class Ledger:
             "because": list(because),
             "replaces": list(replaces),
         }
-        cid = digest(content)
-        if any(row["id"] == cid for row in self.rows):
-            # Re-asserting the same thing is not a new event. Whether that is right
-            # for repeated identical `did`s is an open question, not a settled one.
-            self.duplicates += 1
-            return cid
-        body = dict(content, id=cid, seq=len(self.rows) + 1, ts=round(time.time(), 3))
-        raw = json.dumps(body, sort_keys=True, ensure_ascii=False).encode()
+        return dict(content, id=digest(content), seq=0, ts=round(time.time(), 3))
+
+    def _write(self, bodies):
+        """Write frames and make them durable. Positions are assigned here."""
+        assert bodies, "nothing to write"
+        base = len(self.rows)
+        for i, body in enumerate(bodies):
+            body["seq"] = base + i + 1
+        data = b"".join(frame(json.dumps(b, sort_keys=True, ensure_ascii=False).encode())
+                        for b in bodies)
         with open(self.path, "ab") as f:
-            f.write(frame(raw))
+            f.write(data)
             f.flush()
             os.fsync(f.fileno())          # the commit point (D-039)
-        self.rows.append(body)
-        return body["id"]
+        self.rows.extend(bodies)
 
-    # ---------------------------------------------------------------- reading
+    # ------------------------------------------------------------------ writing
+    def append(self, subject, predicate, value, world, by, because=(), replaces=()):
+        """A claim that does not advance a world. Roots have their own methods."""
+        assert self.writable, "this ledger was opened read-only"
+        assert predicate in PREDICATES, f"unknown predicate {predicate}"
+        assert world and (world == "*" or isinstance(world, str)), "world is required (D-030)"
+        if predicate not in GLOBAL_OK:
+            assert world != "*", f"{predicate} must land in a concrete world (D-030)"
+        if predicate == "is" and isinstance(value, dict) and "root" in value:
+            raise AssertionError("a root may only be written by commit/tick/rollback/bootstrap")
+        if predicate == "did":
+            assert value["verb"] in VERBS, f"unknown verb {value['verb']}"
+        if predicate == "may":
+            assert value["mode"] in MODES, f"unknown mode {value['mode']}"
+        if predicate == "counts":
+            assert value["form"] in FORMS, f"unknown form {value['form']}"
+        if predicate in HUMAN_ONLY and not by.startswith("human:"):
+            assert value.get("proposal") is True, f"{predicate} is human-written; agent may only propose"
+
+        with self._exclusive(world):
+            body = self._body(subject, predicate, value, world, by, because, replaces)
+            if any(row["id"] == body["id"] for row in self.rows):
+                # Re-asserting the same thing is not a new event. Whether that is
+                # right for repeated identical `did`s is still open (D-038).
+                self.duplicates += 1
+                return body["id"]
+            self._write([body])
+            return body["id"]
+
+    def _roots(self, world):
+        return [r for r in self.active()
+                if r["predicate"] == "is" and isinstance(r["value"], dict)
+                and "root" in r["value"] and r["world"] == world]
+
+    def _head_checked(self, world, expect):
+        """The parent viewpoint, or Conflict. A world with no root accepts a fork."""
+        roots = self._roots(world)
+        if roots:
+            cur = roots[-1]["id"]
+            if cur != expect:
+                raise Conflict(f"{world}: expected {expect}, current {cur}")
+            return cur
+        parent = self.get(expect)         # the fork's parent must exist
+        if parent["predicate"] != "is" or "root" not in parent["value"]:
+            raise Conflict(f"{expect} is not a viewpoint")
+        return expect
+
+    def bootstrap(self, world, files, by, because=()):
+        """The first root of a world. Refuses if one already exists."""
+        with self._exclusive(world):
+            if self._roots(world):
+                raise Conflict(f"{world} already has a root")
+            root = self._body("world", "is", {"root": {"files": files}},
+                              world, by, because, [])
+            self._write([root])
+            return root["id"]
+
+    def commit(self, world, files, by, expect, because=(), replaces=()):
+        """Advance a world: one did + one root, under a compare-and-swap on the head."""
+        with self._exclusive(world):
+            parent = self._head_checked(world, expect)
+            did = self._body(by, "did",
+                             {"verb": "write", "view": parent, "result": {"files": files}},
+                             world, by, list(because) + [parent], [])
+            root = self._body("world", "is", {"root": {"files": files}},
+                              world, by, [did["id"]], list(replaces))
+            self._write([did])
+            self._write([root])           # B: one fsync for both, next step
+            return root["id"]
+
+    def tick(self, world, by, expect, because=()):
+        """Same tree, later position. Time must be able to advance without the world."""
+        with self._exclusive(world):
+            parent = self._head_checked(world, expect)
+            tree = self.get(parent)["value"]["root"]
+            root = self._body("world", "is", {"root": tree}, world, by,
+                              list(because) + [parent], [])
+            self._write([root])
+            return root["id"]
+
+    def rollback(self, world, to, by, expect, because=()):
+        """Move the pointer back. Nothing is undone; history does not move."""
+        with self._exclusive(world):
+            parent = self._head_checked(world, expect)
+            target = self.get(to)
+            if target["predicate"] != "is" or "root" not in target["value"]:
+                raise Conflict(f"{to} is not a viewpoint")
+            root = self._body("world", "is", {"root": target["value"]["root"]},
+                              world, by, list(because) + [to], [parent])
+            self._write([root])
+            return root["id"]
+
+    # ------------------------------------------------------------------ reading
     def get(self, cid):
         for row in self.rows:
             if row["id"] == cid:
@@ -117,11 +225,7 @@ class Ledger:
         return [row for row in self.rows if live[row["id"]]]
 
     def _origin(self, root):
-        """The viewpoint a root was forked from, if it came from another world.
-
-        A fork is just a commit whose `did.view` points into a different world, so
-        ancestry is derivable and needs no extra field.
-        """
+        """The viewpoint a root was forked from, if it came from another world."""
         for cid in root["because"]:
             claim = self.get(cid)
             if claim["predicate"] == "did" and claim["value"].get("view"):
@@ -131,8 +235,8 @@ class Ledger:
         return None
 
     def _world_origin(self, world):
-        """Where a world was forked from, if it was. A property of the world, not
-        of a viewpoint: otherwise any later tick would lose the ancestry."""
+        """Where a world was forked from. A property of the world, not a viewpoint:
+        otherwise any later tick would lose the ancestry."""
         for row in self.rows:
             if row["world"] != world or row["predicate"] != "is" or "root" not in row["value"]:
                 continue
@@ -144,8 +248,8 @@ class Ledger:
     def visible(self, viewpoint):
         """The slice of the ledger visible at a viewpoint, walking ancestry.
 
-        Scope resolution lives here, not in projections (D-031): a projection is
-        handed a finished world and cannot read another one by accident.
+        A projection receives a slice, never the ledger: it cannot read another
+        world by accident (D-031).
         """
         root = self.get(viewpoint)
         assert root["predicate"] == "is" and "root" in root["value"], "a viewpoint must be a root claim"

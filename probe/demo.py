@@ -52,18 +52,14 @@ def what_it_needs(slice_):
 # ------------------------------------------------------------------- the hand
 def commit(ledger, world, files, by, because, view=None):
     """One transition = one did + one root. Forking is the same call with a view
-    that points into another world."""
-    prev = view or ledger.current_root(world)
-    did = ledger.append(by, "did", {"verb": "write", "view": prev, "result": {"files": files}},
-                        world, by=by, because=list(because) + [prev])
-    return ledger.append("world", "is", {"root": {"files": files}}, world, by=by, because=[did])
+    that points into another world. The head check lives in the ledger (D-040)."""
+    expect = view or ledger.current_root(world)
+    return ledger.commit(world, files, by, expect, because=list(because))
 
 
 def tick(ledger, world, by):
     """Advance time without changing the world."""
-    prev = ledger.current_root(world)
-    return ledger.append("world", "is", {"root": ledger.get(prev)["value"]["root"]}, world,
-                         by=by, because=[prev])
+    return ledger.tick(world, by, ledger.current_root(world))
 
 
 def spendable(ledger, slice_, rule, target):
@@ -119,7 +115,7 @@ def main():
                                     "scope": "first installation"}, "*", by=HUMAN)
     ledger.append("machine", "counts", {"form": "satisfaction", "assumption": True,
                                         "integrity": "unmeasured"}, "*", by=HUMAN)
-    v0 = ledger.append("world", "is", {"root": {"files": {}}}, W1, by="sensor:fs")
+    v0 = ledger.bootstrap(W1, {}, by="sensor:fs")
     for verb, mode in (("read", "allow"), ("write", "allow"), ("send", "require")):
         ledger.append(AGENT, "may", {"verb": verb, "mode": mode}, "*", by=HUMAN, because=[v0])
     rule = ledger.append(HUMAN, "counts", {"form": "satisfaction", "scope": PKG,
@@ -147,8 +143,7 @@ def main():
     v2b = tick(ledger, W2, HUMAN)
 
     # rollback world 1 only
-    v5 = ledger.append("world", "is", {"root": {"files": {}}}, W1, by=HUMAN,
-                       because=[v0], replaces=[ledger.current_root(W1)])
+    v5 = ledger.rollback(W1, v0, HUMAN, expect=ledger.current_root(W1))
 
     print("\n--- the ledger (trimmed: id/view/ts columns omitted)")
     for row in ledger.rows:
