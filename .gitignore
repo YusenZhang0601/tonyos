@@ -11,3 +11,7 @@ lost+found/
 
 # 探针的假世界（可重新生成，不入库）
 probe/world/
+
+# Python bytecode
+__pycache__/
+*.pyc
