@@ -1,82 +1,75 @@
 # The probe
 
-One day of work, deliberately crude. **Its job is to be wrong**, so the design stops being self-validating.
+Two passes so far. **Its job is to be wrong**, so the design stops being self-validating.
 
 ```bash
 python3 probe/demo.py
 ```
 
-Three files: `ledger.py` (claims, retraction, justification chains), `world.py` (content-addressed blobs behind a root pointer), `demo.py` (the scenario and two projections). State goes to `probe/world/`, which is gitignored.
+Three files: `ledger.py` (claims, worlds, viewpoints, retraction), `world.py` (content-addressed files), `demo.py` (the scenario). State goes to `probe/world/`, gitignored.
 
-**Scope, frozen**: install a package into a fake world → advance the reference → roll it back → attempt a `send` with no signature. No real syscalls, no package manager, no concurrency, no adapters, no UI.
+**Scope, frozen**: install a package into a fake world → attempt a `send` with no signature → get a signature → send → roll back. No real syscalls, no package manager, no concurrency, **no second world**.
 
-## The ledger, in full
+## First pass: six findings
 
-```
-  1  counts human:tony    human:tony   {"approves": "self", "form": "representation", "scope": "initial trust"}
-  2  is     host          sensor:cpu   {"arch": "x86_64"}
-  3  is     world         sensor:fs    {"root": "4faa3e5f1e76b5e9"}
-  4  may    agent:main    human:tony   {"mode": "allow", "verb": "read"}
-  5  may    agent:main    human:tony   {"mode": "allow", "verb": "write"}
-  6  may    agent:main    human:tony   {"mode": "require", "verb": "send"}
-  7  counts human:tony    human:tony   {"form": "satisfaction", "scope": "pkg:htop", "test": "all files present and byte-identical"}
-  8  did    agent:main    agent:main   {"outcome": "done", "target": "etc/manifest", "verb": "read", "world": "4faa…"}
-  9  did    agent:main    agent:main   {"outcome": "done", "target": "/usr/bin/htop", "verb": "write", "world": "81fb…"}
- 10  did    agent:main    agent:main   {"outcome": "done", "target": "/etc/htoprc", "verb": "write", "world": "ca92…"}
- 11  did    agent:main    agent:main   {"outcome": "done", "target": "/usr/share/doc/htop", "verb": "write", "world": "43fd…"}
- 12  is     world         sensor:fs    {"root": "43fd…"}                                   [retracted]
- 13  is     pkg:htop      projection:1a64d2514c345c7d  {"status": "installed", "world": "43fd…"}
- 14  did    agent:main    agent:main   {"outcome": "denied", "target": "mail:advisor", "verb": "send", "why": "mode=require"}
- 15  is     world         human:tony   {"root": "4faa…"}
-```
+1. A claim had no `world` — history from different branches was indistinguishable.
+2. A projection that assumes "now" answered `installed` **after the rollback**.
+3. `is` drifted into self-contradiction (`installed` + `proved: false`) without a shape rule.
+4. A blocked `send` left **no trace** unless failure is a `did` with an `outcome`.
+5. The first signature signed itself — a circle where a root should be.
+6. One file, one claim: three files took fifteen claims.
 
-Fifteen claims. **It fits on one screen.** That is the vocabulary's first real evidence.
+## Second pass: the fixes, and what the fix broke
 
-## What survived
-
-- **Four predicates were enough.** Nothing needed a fifth. Intent, approval, success and rollback all landed.
-- **The justification chain bottoms out where it should**: at a human signature and a sensor reading. `derivation roots: ['human']`.
-- **Rollback was pointer-only and byte-identical.** Nothing was undone, nothing was copied; the world was simply no longer referenced. "Undo" and "restore" never appeared.
-
-## What broke
-
-### 1. A claim has no scope — and it needs one
-
-`did` records `world`, but only because the probe put it in `value`. A derived `is` claim does the same. Both are really saying *which world this is about*, and that belongs in the record, not in the value:
+Applied: **world on every claim** (norms may be `*`, facts may not) · **viewpoint = a root claim** · **a commit is one `did` + one root**, with "where it came from" recorded once.
 
 ```
-claim { subject, predicate, value, world, by, at, because, replaces }
+  1  counts *        human:tony  {"form": "representation", "approves": "bootstrap"}
+  2  counts *        machine     {"form": "satisfaction", "assumption": true, "integrity": "unmeasured"}
+  3  is     world    host        {"arch": "x86_64"}
+  4  is     world    world       {"root": {"files": {}}}
+  5  may    *        agent:main  {"mode": "allow", "verb": "read"}
+  6  may    *        agent:main  {"mode": "allow", "verb": "write"}
+  7  may    *        agent:main  {"mode": "require", "verb": "send"}
+  8  counts *        human:tony  {"form": "satisfaction", "scope": "pkg:htop", ...}
+  9  did    world    agent:main  {"verb": "read", "target": "/usr/share/doc", "view": …}
+ 10  did    world    agent:main  {"verb": "write", "result": {"files": {...}}, "view": …}
+ 11  is     world    world       {"root": {"files": {…3 files…}}}
+ 12  is     world    pkg:htop    {"installed": true, "at": …}          ← projection
+ 13  did    world    agent:main  {"verb": "send", "outcome": "denied"}  ← red line held
+ 14  counts *        human:tony  {"form": "representation", "approves": …}
+ 15  is     world    world       {"root": {…same files…}}               ← tick
+ 16  did    world    agent:main  {"verb": "send", "outcome": "done"}
+ 17  is     world    human:tony  {"root": {"files": {}}}                ← rollback
 ```
 
-**Needs a ruling.** Without it, claims from different branches are indistinguishable.
+Sixteen claims after the bootstrap, one screen.
 
-### 2. A projection that assumes "now" is wrong
+### What is now proven
 
-First implementation of `what_its_doing(ledger)` read "the current status" and answered `installed` **after the world had been rolled back**. The bug is not the bug; the lesson is that the design's "there is no global now" is only real if the projection API forces a world argument. Fixed here by taking the root explicitly; the constraint must become a rule, not a habit.
+- **The same question, two viewpoints, two opposite answers, both correct.**
+  `installed_at(v1) = True`, `installed_at(v3) = False`. The projection cannot lie about "now" because there is no "now" to lie about — and it never sees the ledger, only a slice.
+- **One commit for three files, and for three hundred.** Files never enter the ledger.
+- **The red line held, then yielded to a signature**: `denied` at v1, `done` at v2, and the `done` claim carries the approval in its `because`.
+- **Rollback moved a pointer and deleted nothing.** All claims remain; history is not rewritten.
 
-### 3. `is` needs a shape: one attribute per claim
+### What the second pass broke
 
-The first run mixed `{"field": …, "value": …}` with `{"status": …}` and immediately drifted into a self-contradicting value: `{"status": "installed", "proved": false}`. One claim, one attribute — the contradiction becomes impossible to write.
+**A · Time cannot advance without the world changing.**
+A viewpoint is a root claim, so it only moves when a claim is written. But the approval was written *after* v1 — and v1 could not see it. The second `send` was blocked for a reason no one intended: **the viewpoint had no way to say "same world, later moment"**. Fixed with a `tick`: a root claim asserting the same tree. A viewpoint is a position in time as much as in space, and the model had only given it a position in space.
 
-### 4. Failure is also a `did`, and the ledger must say which kind
+**B · An approval never expires.**
+One signature made `send` permanently allowed: at v3 the screen shows `needs=[]`. Nothing in the vocabulary bounds an approval — no scope, no count, no deadline. **A single signature is currently a permanent one.** This is a finding, not yet fixed.
 
-A denied `send` is recorded as `outcome: "denied"`. Without that, a blocked red line leaves **no trace** — and a blocked red line is exactly what an audit needs to see. Outcome must be part of the vocabulary, not an afterthought.
+**C · Every root stays active forever.**
+`current` means "the newest active root", not "the only one". Old roots are not retracted (correct — they are history), but this means any code that asks "what is the world" must ask for *newest*, never *the*. A wording trap waiting for the first careless implementation.
 
-### 5. The first signature signs itself
+## Rulings still owed
 
-`{"approves": "self"}` is the bootstrap: the root of trust is a signature approving itself. The probe stepped over it. A real system cannot — this is where the measured boot chain has to come in, and where "assumption" must be written as an assumption.
+1. Should an approval carry a scope and a lifetime (one-shot, N uses, TTL)? (finding B)
+2. Does `tick` need its own verb, or is a root claim with an unchanged tree enough? (finding A)
+3. The trust root: still assumed, written down as an assumption (claim 2). Deferred with a trigger.
 
-### 6. One file, one claim — it will not scale
+## What this probe still does not test
 
-Three files took fifteen claims. A real package has hundreds. Per-file `did` will explode the ledger and make the one-screen map impossible.
-
-**Needs a ruling**: a batch form (one `did` over a manifest, or a `did` whose subject is a tree). Note this is exactly the kind of thing a language would have solved, and we chose not to have one — so it has to be solved in the vocabulary.
-
-## Rulings this probe asks for
-
-1. Add a `world` scope to every claim (finding 1).
-2. Make the world an explicit argument of every projection, enforced by the API (finding 2).
-3. Define a batch/aggregate form for `did` (finding 6).
-4. Decide how the first signature is grounded (finding 5).
-
-Findings 3 and 4 were cheap and are already applied in the probe.
+**A second world.** No forking, no two agents, no concurrency. Everything here is single-branch, and the whole point of the design is multi-branch. This is the largest untested surface, and saying otherwise would be exactly the failure this project is trying to avoid.

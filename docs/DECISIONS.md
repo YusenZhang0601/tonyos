@@ -213,3 +213,31 @@ Overturned entries are **never deleted**: they are marked "superseded by D-0xx",
 - **Ruling**: a completion claim must carry evidence — the command run and where its output is. Anything not run is labelled **not verified**. A gap is left open rather than filled with a guess. A design choice found while implementing is raised, not applied.
 - **Consequences**: work is slower, and reports will sometimes end in "not verified". Accepted deliberately: the product is accountability, so the method that builds it cannot be "it looks right".
 - **Relations**: refines D-002 (the human signs); structurally the same rule as D-019 — an agent's claim only becomes real when it carries something outside itself.
+
+## D-030 Every claim carries a world; norms may be global
+
+- **Context**: the probe could not tell which branch a claim belonged to. Recalling a derivation after a rollback was ambiguous, and the alternative — "a fork that deletes the red line and then sends" — is a legal exploit.
+- **Ruling**: every claim carries `world`. `may` and `counts` may use `*` (global); `is` and `did` must land in a concrete world. The rule is mechanical — read the predicate, not the intention.
+- **Consequences**: norms cannot be rolled back by an agent; facts are always attributable to a branch. Hardware facts are re-asserted per world, which is redundant but never ambiguous.
+- **Relations**: derived from probe finding 1; depends on D-006.
+
+## D-031 A viewpoint is a root claim; slicing belongs to the store
+
+- **Context**: the first projection took the ledger and assumed "now", then reported `installed` after the rollback. An earlier attempt to fix this by making the world an API argument did not work: the projection would still read a claim from another world and merely stamp it with the right name.
+- **Ruling**: a viewpoint **is** a root claim — it pins the branch (`subject`), the moment (`seq`) and the tree (`value`) in one immutable identifier. The store produces the slice visible at that viewpoint; a projection receives the slice, never the ledger, so it cannot read another world by accident. Multi-world projections must name several viewpoints explicitly.
+- **Consequences**: "the same question, two viewpoints, two opposite answers, both correct" is now the probe's proof. Scope resolution is one implementation in one place rather than a discipline repeated in every projection.
+- **Relations**: derived from probe finding 2.
+
+## D-032 A commit is one `did` plus one root; files never appear
+
+- **Context**: per-file claims would take hundreds of records for one install, and a "batch" field would invent vocabulary to fix a problem that was really only about the screen.
+- **Ruling**: a commit is one `did` and one `is(world, root)`. The `did` records the verb, the viewpoint it started from (`at`, which doubles as the compare-and-swap precondition) and the result tree; the root records the tree. "Where it came from" appears exactly once. Files never appear at all; diffs are projections.
+- **Consequences**: granularity is the committer's judgement, recorded on the ledger. "Half-installed" stops existing. Per-file provenance weakens: the ledger answers *who* and *what diff*, not *which byte, when*.
+- **Relations**: derived from probe finding 6; supersedes the "batch form" proposal in probe/README (first pass).
+
+## D-033 Trust root: split authorization from integrity, and mark the missing half
+
+- **Context**: the first signature approved itself. That is a circle: a system cannot ground itself. Two different guarantees are usually conflated here — *who said yes* and *is this machine what it claims*.
+- **Ruling**: authorization is grounded in a human signature (possible today, out of band); integrity is grounded in a measured boot (not available on this machine). The absent half is written down as an **assumption claim authored by the human**, never dressed up as evidence.
+- **Consequences**: any chain ending in the assumption carries that label; the Screen can show "root: assumed (unmeasured)"; when measurement arrives, old conclusions keep their label rather than being retroactively upgraded.
+- **Relations**: derived from probe finding 5. **Deferred beyond the assumption claim** — triggers: the first third-party agent (identity first), and any external release (integrity).

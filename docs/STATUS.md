@@ -4,7 +4,7 @@
 
 ## Phase
 
-Design (the base is at v0.10; no code yet)
+Design (the base is at v0.11; no code yet)
 
 ## Working on
 
@@ -27,16 +27,15 @@ The success test: **if one real event cannot be written in four predicates withi
 
 - **Reference implementation list** (D-021): deferred; review after both probes.
 - **Map budget** (D-022): deferred; review once a first map exists.
-- **Claim scope** (probe finding 1): every claim needs a `world` field, not a value key.
-- **Projection signature** (finding 2): the world must be a required argument, enforced by the API.
-- **Batch `did`** (finding 6): one file one claim will not scale; a manifest/aggregate form is needed.
-- **First signature** (finding 5): how the root of trust is grounded — the measured boot chain's job.
+- **Approval lifetime** (probe finding B): one signature currently allows forever. Needs scope, count or TTL.
+- **`tick`** (probe finding A): is a root claim with an unchanged tree enough to advance time, or does it need its own verb?
+- **Trust root** (D-033): only the assumption claim is implemented; measurement is deferred with triggers.
 - **v0 install / rollback**: how it lands on the existing four partitions — not designed yet.
 - **Genuinely simultaneous conflicts**: two contradictory instructions from the human at the same instant — not designed yet.
 
 ## Health
 
-- Design authority: `design/FOUNDATION.md` v0.10
+- Design authority: `design/FOUNDATION.md` v0.11
 - Decision log: `docs/DECISIONS.md` D-001 … D-028 (3 supersession chains)
 - Implementation: Rust core, Python probe; ABI carries no language types (D-027)
 - Agents: external, one ABI + N thin adapters, MCP is an adapter only (D-028)
