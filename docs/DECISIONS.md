@@ -312,3 +312,14 @@ Overturned entries are **never deleted**: they are marked "superseded by D-0xx",
 - **Measured** after implementation: one `fsync` per commit lifted 18.8 → 39.4 commits/s. Group commit reached 195/s at eight writers with `fsync/commit` 0.16, and p99 fell from 1,968 ms to 79 ms. The batch cannot exceed the number of concurrent writers, because each writer waits for its own durability; at 16–32 writers it plateaus at 8–9 and throughput at ~250/s, so the next ceiling is the commit path on two cores, not the disk.
 - **Falsifier**: a filesystem that persists a later frame but not an earlier one *within one `fsync`* would break both prefix recovery and this ordering. Not tested.
 - **Relations**: implements §4.3's per-world CAS; refines D-031, D-032 and D-035; depends on D-039.
+
+## D-041 Events are not retractable; beliefs are, to a fixpoint
+
+- **Context**: `active()` promised "retracting a retraction brings the original back", but implemented a single pass, so the original stayed dead. Implementing the promise as written would revive a spent approval if the `did` that spent it were retracted: one signature, two sends. The vocabulary allowed `replaces` to target a `did`, but a `did` is history, not belief.
+- **Ruling**:
+  1. **`did` is an event and cannot be retracted.** `replaces` may not target a `did`. To record that an event was mistaken, append a claim *about* it; the event still happened.
+  2. **`is` / `may` / `counts` are beliefs and rules, and may be retracted.** Activity is computed to a **fixpoint**: a claim is active iff no active claim retracts it. A double retraction therefore restores the original.
+  3. **A retraction cycle is undefined.** Treat its members as inactive and surface it; do not pick a winner.
+- **Consequences**: D-034 is safe — the send's `did` retracts the approval, and because the `did` cannot be retracted, the approval cannot come back. `active()` is no longer a single pass; it is cached per ledger state, because `visible()` uses it and the Screen will call it often. The head index already keeps the write path off `active()`.
+- **Falsifier**: a legitimate need to withdraw a `did` (a sensor logged a reading that never happened) would make this rule wrong. The answer would be a later event that supersedes it in the projection, not a retraction.
+- **Relations**: resolves the pass-8 finding; refines D-034; depends on D-006.

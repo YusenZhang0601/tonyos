@@ -66,10 +66,6 @@ The success test: **if one real event cannot be written in four predicates withi
 - **Cross-process group commit** (D-037/D-040): two processes cannot share an `fsync`
   boundary without a daemon owning the log. Accept per-commit `fsync` outside one
   process, or design the daemon?
-- **`active()` contradicts its own docstring** (found in pass 8): it says "retracting a
-  retraction brings the original back", but it is a one-pass cascade. a replaced by b,
-  b replaced by c → a stays dead. The index mirrors the implementation. Fix the
-  behaviour or the comment?
 - **The whole log in memory.** The probe holds every row; the core cannot. Paging or
   indexing on disk is undesigned.
 - **`visible()` is O(n).** The Screen will call it; whether it needs its own index is
@@ -78,12 +74,14 @@ The success test: **if one real event cannot be written in four predicates withi
 ## Health
 
 - Design authority: `design/FOUNDATION.md` v0.15
-- Decision log: `docs/DECISIONS.md` D-001 … D-040 (3 supersession chains)
+- Decision log: `docs/DECISIONS.md` D-001 … D-041 (3 supersession chains)
 - Implementation: Rust core, Python probe; ABI carries no language types (D-027)
 - Agents: external, one ABI + N thin adapters, MCP is an adapter only (D-028)
 - Gate: `tools/check.sh` (structure)
 - Repository: `/lab`, `main`, public at github.com/YusenZhang0601/tonyos
 - Licence: code GPL-3.0-only / docs CC BY-4.0 / name reserved / contributions require a CLA (D-023)
 - No system yet; the probe is the only executable thing (`python3 probe/demo.py`)
-- Probe: eight passes, six executable experiments (`demo`, `crash`, `concurrent`,
-  `group`, `cost`, `index`)
+- Retraction: `did` is an event and cannot be retracted; `is` / `may` / `counts` are
+  beliefs and reach a fixpoint, cached per ledger state (D-041)
+- Probe: eight passes, seven executable experiments (`demo`, `crash`, `concurrent`,
+  `group`, `cost`, `index`, `retract`)

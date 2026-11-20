@@ -142,6 +142,7 @@ class Ledger:
         self.scan_s = 0.0
         self.write_s = 0.0
         self._offset = 0
+        self._active_cache = None
         # The head index: a projection of the log, rebuilt on open, never stored.
         self._heads = {}
         self._root_world = {}
@@ -199,6 +200,7 @@ class Ledger:
         payloads, valid = recover(raw)
         self._offset = valid
         self.rows = [json.loads(p) for p in payloads]
+        self._active_cache = None
         self._rebuild_heads()
         if valid < len(raw):
             self.truncated = len(raw) - valid
@@ -282,6 +284,8 @@ class Ledger:
             raw = f.read()
         self.bytes_read += len(raw)
         payloads, valid = recover(raw)
+        if payloads:
+            self._active_cache = None
         for p in payloads:
             row = json.loads(p)
             self.rows.append(row)
@@ -317,6 +321,9 @@ class Ledger:
                 fcntl.flock(lock, fcntl.LOCK_UN)
 
     def _body(self, subject, predicate, value, world, by, because, replaces):
+        for target in replaces:
+            if self.get(target)["predicate"] == "did":
+                raise AssertionError("a did is an event; it cannot be retracted (D-041)")
         # Identity is content only (D-038). Position is a property of the container.
         content = {
             "subject": subject,
@@ -345,6 +352,7 @@ class Ledger:
         if self.group:
             ticket = self._batcher.enqueue(data)
             self.rows.extend(bodies)
+            self._active_cache = None
             self._offset += len(data)
             for body in bodies:
                 self._index_row(body)
@@ -360,6 +368,7 @@ class Ledger:
             os.fsync(f.fileno())          # the commit point (D-039)
         self._fsyncs += 1
         self.rows.extend(bodies)
+        self._active_cache = None
         self._offset += len(data)
         for body in bodies:
             self._index_row(body)
@@ -477,24 +486,46 @@ class Ledger:
         raise NotFound(cid)
 
     def active(self):
-        """A claim is inactive if an *active* claim retracts it (fixpoint: retracting a
-        retraction brings the original back)."""
+        """A claim is active iff no *active* claim retracts it.
+
+        This is a fixpoint, not a single pass: retracting a retraction brings the
+        original back. A `did` cannot be retracted (D-041), so an approval spent by
+        an event cannot be revived by retracting that event.
+
+        A retraction cycle has no well-founded answer; its members stay undecided
+        and are treated as inactive.
+        """
+        if self._active_cache is not None:
+            return self._active_cache
         t0 = time.perf_counter()
         self.scans += 1
         self.rows_scanned += len(self.rows)
-        live = {row["id"]: True for row in self.rows}
-        changed = True
-        while changed:
+        retractors = {}
+        for row in self.rows:
+            for target in row["replaces"]:
+                retractors.setdefault(target, []).append(row["id"])
+        state = {row["id"]: None for row in self.rows}     # None = undecided
+        for _ in range(len(self.rows) + 1):
             changed = False
             for row in self.rows:
-                if not live.get(row["id"]):
+                rid = row["id"]
+                if state[rid] is False:
                     continue
-                for target in row["replaces"]:
-                    if live.get(target):
-                        live[target] = False
+                parents = retractors.get(rid, [])
+                if any(state[r] is True for r in parents):
+                    if state[rid] is not False:
+                        state[rid] = False
                         changed = True
+                elif all(state[r] is False for r in parents):
+                    if state[rid] is not True:
+                        state[rid] = True
+                        changed = True
+            if not changed:
+                break
+        out = [row for row in self.rows if state[row["id"]] is True]
+        self._active_cache = out
         self.scan_s += time.perf_counter() - t0
-        return [row for row in self.rows if live[row["id"]]]
+        return out
 
     def _origin(self, root):
         """The viewpoint a root was forked from, if it came from another world."""

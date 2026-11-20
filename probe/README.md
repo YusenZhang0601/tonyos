@@ -379,10 +379,15 @@ the index first would have left the real bottleneck untouched.
 **C · The locked path is now fsync-bound.** 27 ms of a 31 ms commit. The group
 path at 617/s is bound by the commit path on two cores, not the device.
 
-**D · A pre-existing contradiction surfaced.** `active()` says "retracting a
-retraction brings the original back", but it is a one-pass cascade: a retracted by
-b, b retracted by c, and a stays dead. The index mirrors the implementation, not
-the comment. Raised in STATUS; not fixed here.
+**D · A pre-existing contradiction surfaced, and was settled.** `active()` said
+"retracting a retraction brings the original back", but it was a one-pass cascade:
+a retracted by b, b retracted by c, and a stayed dead. Fixing it as written would
+revive a spent approval if the `did` that spent it were retracted — one signature,
+two sends. **D-041** splits the vocabulary: a `did` is an event and cannot be
+retracted; `is` / `may` / `counts` are beliefs and are computed to a fixpoint.
+`probe/retract.py` checks four retraction graphs against a **subset oracle** that
+enumerates every consistent active set, so it cannot share the implementation's
+bug. A spent approval stays spent.
 
 ### What pass 8 does not test
 

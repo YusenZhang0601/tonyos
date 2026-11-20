@@ -19,7 +19,9 @@ W1 = "world:lab"
 
 
 def brute_active(rows):
-    """The same one-pass retraction cascade as `active()`, written independently."""
+    """A single-retraction scan. With no retraction of a retraction it agrees with
+    the fixpoint; probe/retract.py covers the double-retraction case with a subset
+    oracle that does not share this implementation."""
     live = {r["id"]: True for r in rows}
     for r in rows:
         if not live.get(r["id"]):
