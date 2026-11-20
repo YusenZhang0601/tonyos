@@ -132,7 +132,39 @@ class Ledger:
         self.truncated = 0
         self._batcher = Batcher(path, window) if self.group else None
         self._fsyncs = 0
-        self._load(truncate=writable)
+        # Counters, for stage 2's "measure before optimising" step.
+        self.full_loads = 0
+        self.bytes_read = 0
+        self.scans = 0
+        self.rows_scanned = 0
+        self.writes = 0
+        self.load_s = 0.0
+        self.scan_s = 0.0
+        self.write_s = 0.0
+        self._offset = 0
+        if writable:
+            # Loading and cutting a tail is a writer's job, and it needs the lock:
+            # a reader that truncates can destroy a frame another process is writing.
+            with open(self.path + ".lock", "a+") as lock:
+                fcntl.flock(lock, fcntl.LOCK_EX)
+                try:
+                    self._load(truncate=True)
+                finally:
+                    fcntl.flock(lock, fcntl.LOCK_UN)
+        else:
+            self._load(truncate=False)
+
+    def stats(self):
+        return {
+            "commits": self.writes,
+            "full_loads": self.full_loads,
+            "bytes_read": self.bytes_read,
+            "scans": self.scans,
+            "rows_scanned": self.rows_scanned,
+            "load_s": self.load_s,
+            "scan_s": self.scan_s,
+            "write_s": self.write_s,
+        }
 
     def close(self):
         if self._batcher:
@@ -151,17 +183,57 @@ class Ledger:
     # ------------------------------------------------------------------ storage
     def _load(self, truncate=False):
         """Read the file. Cutting a bad tail is only allowed under exclusive access."""
+        t0 = time.perf_counter()
+        self.full_loads += 1
         self.rows = []
         if not os.path.exists(self.path):
+            self.load_s += time.perf_counter() - t0
             return
         raw = open(self.path, "rb").read()
+        self.bytes_read += len(raw)
         payloads, valid = recover(raw)
+        self._offset = valid
         self.rows = [json.loads(p) for p in payloads]
         if valid < len(raw):
             self.truncated = len(raw) - valid
             if truncate:
                 with open(self.path, "r+b") as f:
                     f.truncate(valid)
+        self.load_s += time.perf_counter() - t0
+
+    def _sync_tail(self, truncate=False):
+        """Read only what was appended since the last observed offset.
+
+        The point of stage 2: a commit must not re-read the log. Under the writer
+        lock the tail is authoritative; a reader may see a partial frame and must
+        leave it alone (truncate=False).
+        """
+        t0 = time.perf_counter()
+        if not os.path.exists(self.path):
+            self._offset = 0
+            self.load_s += time.perf_counter() - t0
+            return
+        size = os.path.getsize(self.path)
+        if size < self._offset:              # the file was replaced or truncated
+            self._load(truncate=truncate)
+            return
+        if size == self._offset:
+            self.load_s += time.perf_counter() - t0
+            return
+        with open(self.path, "rb") as f:
+            f.seek(self._offset)
+            raw = f.read()
+        self.bytes_read += len(raw)
+        payloads, valid = recover(raw)
+        for p in payloads:
+            self.rows.append(json.loads(p))
+        self._offset += valid
+        if valid < len(raw):
+            self.truncated += len(raw) - valid
+            if truncate:
+                with open(self.path, "r+b") as f:
+                    f.truncate(self._offset)
+        self.load_s += time.perf_counter() - t0
 
     @contextlib.contextmanager
     def _exclusive(self, world):
@@ -179,7 +251,7 @@ class Ledger:
         with open(self.path + ".lock", "a+") as lock:
             fcntl.flock(lock, fcntl.LOCK_EX)
             try:
-                self._load(truncate=True)
+                self._sync_tail(truncate=True)
                 yield
             finally:
                 fcntl.flock(lock, fcntl.LOCK_UN)
@@ -209,11 +281,14 @@ class Ledger:
             body["seq"] = base + i + 1
         data = b"".join(frame(json.dumps(b, sort_keys=True, ensure_ascii=False).encode())
                         for b in bodies)
+        t0 = time.perf_counter()
         if self.group:
             ticket = self._batcher.enqueue(data)
             self.rows.extend(bodies)
             if not defer:
                 self._batcher.wait(ticket)
+            self.writes += 1
+            self.write_s += time.perf_counter() - t0
             return ticket
         with open(self.path, "ab") as f:
             f.write(data)
@@ -221,6 +296,8 @@ class Ledger:
             os.fsync(f.fileno())          # the commit point (D-039)
         self._fsyncs += 1
         self.rows.extend(bodies)
+        self.writes += 1
+        self.write_s += time.perf_counter() - t0
         return None
 
     # ------------------------------------------------------------------ writing
@@ -339,6 +416,9 @@ class Ledger:
     def active(self):
         """A claim is inactive if an *active* claim retracts it (fixpoint: retracting a
         retraction brings the original back)."""
+        t0 = time.perf_counter()
+        self.scans += 1
+        self.rows_scanned += len(self.rows)
         live = {row["id"]: True for row in self.rows}
         changed = True
         while changed:
@@ -350,6 +430,7 @@ class Ledger:
                     if live.get(target):
                         live[target] = False
                         changed = True
+        self.scan_s += time.perf_counter() - t0
         return [row for row in self.rows if live[row["id"]]]
 
     def _origin(self, root):
@@ -396,8 +477,8 @@ class Ledger:
                 or any(row["world"] == w and row["seq"] <= cutoff for w, cutoff in windows)]
 
     def reload(self):
-        """Refresh this reader's view. A writer re-reads inside the lock anyway."""
-        self._load(truncate=False)
+        """Refresh this view by reading only the new tail. Never truncates."""
+        self._sync_tail(truncate=False)
 
     def seq_of(self, cid):
         return self.get(cid)["seq"]
