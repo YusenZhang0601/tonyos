@@ -19,7 +19,8 @@ Nothing hard. Every open item is deliberately deferred, not stuck.
 0. *(done)* The one-page core: `design/CORE.md`, 88 lines.
 1. **Done**: probe passes one to three — install, approval flow, two worlds (D-030…D-035).
 2. **Done**: throughput probe (E1). fsync, not the shared log, was the ceiling: 38/s per-commit on this HDD, 3,586/s with group commit; sharding bought nothing. D-037's group-commit prediction held, its "shared log is the suspect" consequence did not.
-3. **Next**: set the per-tier floors from this baseline, then the storage crash probe (E2). Concurrency semantics — two agents, one world — is still untested.
+3. **Done**: storage crash probe (E2). A torn tail made the whole store unreadable; a flipped byte was accepted with the original id; `append()` never fsynced. Contract recorded as D-039.
+4. **Next**: adopt the framed log in `Ledger` (fsync, longest-valid-prefix recovery, id asserted on write), then concurrency — two agents, one world.
 
 The success test: **if one real event cannot be written in four predicates within one screen, the vocabulary is wrong.**
 
@@ -34,11 +35,13 @@ The success test: **if one real event cannot be written in four predicates withi
 - **Genuinely simultaneous conflicts**: two contradictory instructions from the human at the same instant — not designed yet.
 - **Performance floors** (D-037): each tier needs a floor or ceiling, or "third" means "unbounded". The baseline now exists (38/s per-commit, 3,586/s grouped); the numbers still need the owner's sign-off.
 - **Repeated identical `did`s** (D-038): they collapse into one event. Is "it looked twice" part of the audit trail, and does that require a per-author counter?
+- **Mid-file corruption** (D-039): recovery stops at the first bad frame. Whether a scrub may resync past it and recover later frames is not decided.
+- **Group commit and durability** (D-037/D-039): one fsync covers many claims, so "committed" becomes a batch boundary. How that is reported to a waiting writer is not yet specified.
 
 ## Health
 
 - Design authority: `design/FOUNDATION.md` v0.15
-- Decision log: `docs/DECISIONS.md` D-001 … D-038 (3 supersession chains)
+- Decision log: `docs/DECISIONS.md` D-001 … D-039 (3 supersession chains)
 - Implementation: Rust core, Python probe; ABI carries no language types (D-027)
 - Agents: external, one ABI + N thin adapters, MCP is an adapter only (D-028)
 - Gate: `tools/check.sh` (structure)

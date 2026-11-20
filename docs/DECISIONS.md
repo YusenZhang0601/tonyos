@@ -286,3 +286,16 @@ Overturned entries are **never deleted**: they are marked "superseded by D-0xx",
 - **Consequences**: identical claims collapse — re-asserting the same thing is not a new event. That is a consequence, **not yet a ruling**: repeated identical `did`s may need a per-author counter, because "it looked twice" is arguably part of the audit trail. Cross-node merge becomes possible in principle; the claim store is now a set as much as a log, and order is supplied by the container.
 - **Falsifier**: if two nodes can produce identical content with different meaning, content-only identity is wrong. Repeated identical `did`s are the first candidate.
 - **Relations**: refines D-030, D-031 and D-032; constrains D-028 and every future scale decision.
+
+## D-039 A commit is durable at fsync; recovery keeps the longest valid prefix
+
+- **Context**: E2. `append()` never called `fsync`, so "committed" meant "in the page cache". One torn byte made `Ledger()` raise and lose the **entire** store, not just the tail. A flipped byte inside a value was accepted with the original id: the id was computed on write and never checked again.
+- **Ruling**:
+  1. **Durability**: a claim is committed when the `fsync` covering it returns. Before that it may vanish, and vanishing must mean it never happened.
+  2. **Framing**: `magic | length | crc32`. Recovery returns the longest prefix of complete, checksum-valid frames; the partial tail is cut, and the cut is recorded (forgetting leaves a trace, §5.2).
+  3. **Stop and report**: the first invalid frame halts recovery. Silently skipping it is forbidden — a lost tail must be visible.
+  4. **Identity is derived and asserted on write.** Re-verifying identities is a scrub, not the normal read path.
+  5. **A checksum is not a signature.** An agent can rewrite a frame and recompute its CRC. Adversarial integrity remains the trust root (D-033).
+- **Consequences**: +10 bytes per record (5.7% on ~175-byte claims). A corrupt frame costs the tail after it unless a scrub resyncs; accepted, because silent loss is worse. The probe's failure was a **reader policy**, not the JSONL format: a lenient reader recovered the same prefix. The checksum is the part JSONL could not supply.
+- **Falsifier**: a torn sector whose CRC still matches, or a filesystem that persists a later frame but not an earlier one. Either breaks "prefix" as a guarantee; neither has been tested.
+- **Relations**: implements D-032, D-038 and §4.7 rule 2; depends on D-033 for adversarial integrity.

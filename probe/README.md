@@ -1,6 +1,6 @@
 # The probe
 
-Four passes. **Its job is to be wrong**, so the design stops being self-validating.
+Five passes. **Its job is to be wrong**, so the design stops being self-validating.
 
 ```bash
 python3 probe/demo.py
@@ -129,6 +129,71 @@ The raw append path only. It bypassed `Ledger`: no CAS, no visibility scan, no
 world semantics. **Two agents committing to one world is still untested.**
 
 fsync is not a power cut; the file is on ext4, not a raw device.
+
+## Pass 5 — a crash, a torn tail, and a flipped bit
+
+Three questions: does a torn tail destroy the store, is content-addressing
+verified, does a framed log recover a prefix at every cut? `python3 probe/crash.py`
+
+```
+A · torn tail
+  reload after a mid-line cut : JSONDecodeError — the whole store is unreadable
+  same bytes, lenient reader  : recovered 2 of 5
+  same cut, framed log        : recovered 2 of 5, stopped at byte 368
+  fsync in ledger.append      : no — a commit is not durable
+
+B · cut at every byte offset, 5 records
+  jsonl strict   cuts= 871  raised= 860  not-a-prefix=0
+  jsonl lenient  cuts= 871  raised=   0  not-a-prefix=0
+  framed+crc     cuts= 921  raised=   0  not-a-prefix=0
+
+C · flip one byte inside a value, then reload
+  stored value                : {'arch': 'x86_65'}
+  id still matches content    : False
+
+D · overhead, 200 records: +5.7% (10 bytes each)
+```
+
+### What pass 5 taught
+
+**A · The store is not crash-safe, and the format is not the reason.**
+`Ledger()` parses every line eagerly, so one torn byte makes the entire ledger
+unreadable — not the tail, everything. A lenient reader over the *same bytes*
+recovers two of five. **This is a reader-policy bug, not a JSONL bug.**
+
+**B · My prediction was wrong.** I expected a lenient reader to occasionally
+accept a truncated line as a valid shorter record. Across every cut offset it
+never did: a cut JSON object is either complete or unparseable. The exhaustive
+test refuted the hypothesis, so the framing's value is not prefix recovery.
+
+**C · Content-addressing was claimed, not enforced.** A flipped byte changed the
+value to `x86_65` while the stored id still named the original. `digest(content)
+== id` was false and nothing cared. The checksum is what catches this; the id
+alone cannot, because nothing recomputes it.
+
+**D · A commit is not durable.** `append()` never calls `fsync`. Closing a file
+is not a durability boundary. A "committed" claim can vanish, and the design
+says a vanished claim must mean it never happened — which is only true if
+`commit` means "fsync returned".
+
+**E · The checksum is not a signature.** An agent can rewrite a frame and
+recompute its CRC. CRC32 protects against accident, not against a writer. That
+is the trust root (D-033), and it is still an assumption.
+
+### The contract this produces
+
+1. A claim is committed when the `fsync` covering it returns; before that it may
+   vanish, and vanishing means it never happened.
+2. Records are framed (`magic | length | crc32`); recovery returns the longest
+   prefix of valid frames, truncates the tail, and leaves a trace of the cut.
+3. Recovery stops at the first bad frame and reports it. Silently skipping is
+   forbidden: a lost tail must be visible.
+4. The id is derived from content and asserted on write. Re-verifying identities
+   is a scrub, not the normal read path.
+
+Still untested: a real power cut (this is a file, not a block device), and
+mid-file corruption followed by valid data (resync is a scrub policy, not
+decided).
 
 ## Still untested
 
