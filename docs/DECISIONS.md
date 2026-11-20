@@ -181,3 +181,14 @@ Overturned entries are **never deleted**: they are marked "superseded by D-0xx",
 - **Ruling**: a term earns its place by fitting. If no existing term fits, coin one — and then you owe the reader three things: **our definition, the nearest existing concept, and where ours differs.** The register is the terminology table at the top of `FOUNDATION.md`, and every coined term must be entered there. `claim` is restored.
 - **Consequences**: the vocabulary may be idiosyncratic, but never unexplained. Adds a gate check: every row of the terminology table must carry all four columns, so a term cannot be introduced without its delta.
 - **Relations**: **supersedes D-024**.
+
+## D-026 No language: descriptions fit the predicates, computation lives in projections
+
+- **Context**: after closing the vocabulary, the obvious next question was whether this is a programming language, and whether derivation needs a rule layer (Datalog-style) to stay trustworthy.
+- **Ruling**: the system provides an ABI and a protocol, not a language. A language would require an open, user-extensible grammar, which contradicts closed vocabulary; it would be the largest possible new layer; and it would be the least replaceable thing in a system built on replaceability. Derivations live in projections, made trustworthy by **pinning the projection's code hash in the claim's justification** — reproducible like a build, not declarative like Datalog.
+- **Consequences**:
+  - decision procedure: describe → one of four predicates; compute → a projection (a reference implementation).
+  - the boundary that must not blur: deterministic projection = derivation (re-runnable); non-deterministic projection (an LLM) = a claim by an agent (accountable, not re-runnable).
+  - the map becomes the **catalogue of queryable projections** — "what can be asked" is a cataloguing question, not a grammar question.
+  - accepted cost: users cannot extend derivation by writing rules; they extend it by writing projections, which are replaceable units.
+- **Relations**: refines D-006; supplies the missing half of D-012 (the map's contents).

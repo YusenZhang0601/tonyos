@@ -2,7 +2,7 @@
 
 > **The single source of design authority.** If an implementation disagrees with this document, this document wins.
 > To change it, first record a ruling in `docs/DECISIONS.md`.
-> Version: v0.8 · 2026-11-20
+> Version: v0.9 · 2026-11-20
 
 ### Terminology
 
@@ -151,6 +151,60 @@ These two are built-in root definitions and cannot be produced by an agent. With
 | "current" | a `counts` claim naming which reference counts as current |
 
 **The cost**: many things cannot be said. What cannot be said has to live outside the core, as a separate implementation — which is exactly the point of the layering.
+
+---
+
+## 2.5 Derivation: reproducible, not declarative
+
+**This system does not provide a programming language.** The vocabulary describes; it does not compute. That is deliberate, and it has a price, so the price is paid explicitly here.
+
+### The decision procedure
+
+> **To describe the world → it must fit one of the four predicates.**
+> **To compute → it goes into a projection, which is a replaceable implementation, not the core.**
+
+### Can projections derive?
+
+Yes. A projection is a function from claims to a view, and it may join, recurse and aggregate. The question was never whether it *can* compute; it is **why anyone should believe the result**.
+
+The answer is not a rule language. It is pinning the code:
+
+```
+because = [input claims..., hash of the projection's code]
+```
+
+A projection's code is itself a content-addressed blob. So a derived claim is **reproducible**: the same inputs plus the same code give the same result, and any change to the code changes the hash and invalidates the old derivation.
+
+> **A derivation does not need to be explainable; it needs to be reproducible.**
+
+Reproducibility requires exactly three things: a pure function, content-addressed inputs, content-addressed code. That is a **build system**, not a language. Nix and Bazel have done this for decades without a language layer.
+
+### The cut that must not be blurred
+
+| | What it is | How it is trusted |
+|---|---|---|
+| **deterministic projection** | a derivation | recompute it |
+| **non-deterministic projection** (an LLM) | **a claim by an agent**, not a derivation | it needs evidence others can check |
+
+Both are claims. One can be re-run; the other can only be held to account. **Blur this line and accountability collapses**, because you will start treating a model's output as a derivation.
+
+### What is actually given up
+
+Only this: users cannot add rules to extend derivation.
+
+That does not need a language to fix. It needs a catalogue, and the catalogue already exists:
+
+> **The map is the catalogue of queryable projections.**
+
+Whether the agent can ask "what are the ancestors of this path" depends on whether that projection exists — a cataloguing question, not a grammar question.
+
+So the loop closes: the vocabulary only describes (closed); projections do the computing (replaceable, trusted through content addressing); the map says which questions can be asked.
+
+### This is the most Unix-shaped part of the design
+
+Unix has no query language. It has **small programs plus a directory** (`/bin`). What you can ask depends on what is installed.
+
+The same structure here, with "program" replaced by "projection" and "directory" by "the map".
 
 ---
 
