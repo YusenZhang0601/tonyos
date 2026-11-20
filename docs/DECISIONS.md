@@ -255,3 +255,10 @@ Overturned entries are **never deleted**: they are marked "superseded by D-0xx",
 - **Ruling**: forking needs no new vocabulary — it is a `did` in the new world whose `view` names a viewpoint in the old one, followed by a root claim. Ancestry is derived **once per world**, from the world's first root, not per viewpoint.
 - **Consequences**: the child sees the parent's claims up to the fork point and never after; a rollback in the parent leaves the child untouched; a sibling never sees the other's work. The bug that forced this rule failed *silently* — after any `tick`, the fork's lineage vanished and the child quietly stopped seeing its parent, with no error and a plausible-looking screen.
 - **Relations**: derived from probe pass 3; depends on D-031 (viewpoint) and D-032 (commit).
+
+## D-036 First principles, then performance, then elegance
+
+- **Context**: the owner set the ordering explicitly, after the RCU story: elegance is not a goal in itself, and it is not the tie-breaker. The failure mode is real and old — the single clean invariant that looks beautiful and quietly destroys multicore throughput.
+- **Ruling**: **first principles first; performance second; elegance third** — as a system-wide guiding order, not a rule about any one module. Elegance already includes readability, maintainability and consistency, so "it will be easier to maintain later" is not a fourth tier. Operationally, every design tradeoff must state **which of the three it gave up**: elegance (allowed, no reason needed) / performance (allowed, but it must carry a number) / first principles (not allowed, except as an explicitly recorded exception).
+- **Consequences**: the first application is §4.3 — one global reference and one global compare-and-swap becomes **one reference per world**. Contention then exists only inside a world, and worlds are already isolated by design. This changes no axiom: nothing is still ever modified, and the system is still reversible; only a piece of tidiness was given up.
+- **Relations**: revises FOUNDATION §4.3; same root as D-017 — both say *align with the machine's real behaviour, not with how the diagram looks*.

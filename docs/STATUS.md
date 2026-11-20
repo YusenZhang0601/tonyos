@@ -4,7 +4,7 @@
 
 ## Phase
 
-Design (the base is at v0.12; no code yet)
+Design (the base is at v0.13; no code yet)
 
 ## Working on
 
@@ -35,7 +35,7 @@ The success test: **if one real event cannot be written in four predicates withi
 
 ## Health
 
-- Design authority: `design/FOUNDATION.md` v0.12
+- Design authority: `design/FOUNDATION.md` v0.13
 - Decision log: `docs/DECISIONS.md` D-001 … D-028 (3 supersession chains)
 - Implementation: Rust core, Python probe; ABI carries no language types (D-027)
 - Agents: external, one ABI + N thin adapters, MCP is an adapter only (D-028)

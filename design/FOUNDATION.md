@@ -3,7 +3,7 @@
 > **The single source of design authority.** If an implementation disagrees with this document, this document wins.
 > **Start with [`CORE.md`](CORE.md)** — one page. This file is the manual behind it: read it when you need the *why*.
 > To change it, first record a ruling in `docs/DECISIONS.md`.
-> Version: v0.12 · 2026-11-20
+> Version: v0.13 · 2026-11-20
 
 ### Terminology
 
@@ -270,7 +270,11 @@ Snapshots / backups / transactions / rollbacks — four concepts disappear toget
 - The only thing that must be agreed on is **what happened, in what order**.
 - State is **an observer's projection**: the world it sees is the prefix of events it has consumed.
 - **There is no global "now"**, only each observer's own. Consistency is required only at the boundaries (no-go zones, audit trail).
-- There is exactly one point of contention: who may advance the reference. The whole system needs **one atomic operation: a compare-and-swap on a reference.**
+- Contention exists only **inside** a world. Each world carries its own reference, so the atomic
+  operation is a compare-and-swap **per world** — never global. Worlds share no state, so they have
+  no reason to share a reference. A single global reference would be a cache-line hotspot, which is
+  precisely the lesson RCU taught the Linux kernel: the elegant single invariant loses to the
+  machine's real cost model.
 
 ### 4.4 Memory = reachability
 
