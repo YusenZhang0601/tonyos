@@ -109,7 +109,7 @@ def cost(path, n=5):
     dt = time.perf_counter() - t
     print(f"  {n} commits in {dt:.2f}s          : {n/dt:.1f} commits/s "
           f"({1000*dt/n:.0f} ms each, 1 fsync per commit)")
-    print("  group commit is not applied yet (D-037 predicted it; E1 measured 35x)")
+    print("  group commit is measured separately in probe/group.py (D-037)")
 
 
 def main():
