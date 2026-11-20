@@ -20,7 +20,8 @@ Nothing hard. Every open item is deliberately deferred, not stuck.
 1. **Done**: probe passes one to three — install, approval flow, two worlds (D-030…D-035).
 2. **Done**: throughput probe (E1). fsync, not the shared log, was the ceiling: 38/s per-commit on this HDD, 3,586/s with group commit; sharding bought nothing. D-037's group-commit prediction held, its "shared log is the suspect" consequence did not.
 3. **Done**: storage crash probe (E2). A torn tail made the whole store unreadable; a flipped byte was accepted with the original id; `append()` never fsynced. Contract recorded as D-039.
-4. **Next**: adopt the framed log in `Ledger` (fsync, longest-valid-prefix recovery, id asserted on write), then concurrency — two agents, one world.
+4. **Done**: the framed log is in `Ledger` — fsync on append, checksum on recovery, tail cut and counted. `probe/demo.py` still passes 8/8.
+5. **Next**: concurrency — two agents committing to one world. `did.at` is the designed compare-and-swap and nothing enforces it.
 
 The success test: **if one real event cannot be written in four predicates within one screen, the vocabulary is wrong.**
 

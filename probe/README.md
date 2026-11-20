@@ -191,6 +191,19 @@ is the trust root (D-033), and it is still an assumption.
 4. The id is derived from content and asserted on write. Re-verifying identities
    is a scrub, not the normal read path.
 
+### Adopted (D-039)
+
+`Ledger` now frames, fsyncs on append, verifies the checksum on recovery, and cuts
+the tail. The same experiment after adoption:
+
+```
+reload after a mid-line cut : 2 of 5 recovered, 110 bytes of tail cut
+fsync in ledger.append      : yes
+one flipped byte            : 0 of 1, the frame failed its checksum
+```
+
+The pre-fix lines above are kept: they are the evidence, not the current state.
+
 Still untested: a real power cut (this is a file, not a block device), and
 mid-file corruption followed by valid data (resync is a scrub policy, not
 decided).

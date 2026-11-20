@@ -68,14 +68,14 @@ def part_a_torn_tail():
         cut = len(raw) // 2
         open(path, "wb").write(raw[:cut])
         try:
-            Ledger(path)
-            print("  reload after a mid-line cut : OK (unexpected)")
+            led2 = Ledger(path)
+            print(f"  reload after a mid-line cut : {len(led2.rows)} of 5 recovered, "
+                  f"{led2.truncated} bytes of tail cut")
         except Exception as exc:                      # noqa: BLE001 - we want the type
             print(f"  reload after a mid-line cut : {type(exc).__name__} — the whole store is unreadable")
         blob = as_framed(claims())
         payloads, valid = recover(blob[:len(blob) // 2])
-        print(f"  same bytes, lenient reader  : recovered {len(jsonl_lenient(raw[:cut]))} of 5")
-        print(f"  same cut, framed log        : recovered {len(payloads)} of 5, stopped at byte {valid}")
+        print(f"  same cut, raw framed bytes  : recovered {len(payloads)} of 5, stopped at byte {valid}")
         print(f"  fsync in ledger.append      : {'yes' if 'fsync' in open('probe/ledger.py').read() else 'no — a commit is not durable'}")
     finally:
         shutil.rmtree(d, ignore_errors=True)
@@ -109,12 +109,17 @@ def part_c_integrity():
         raw = open(path, "rb").read()
         assert b"x86_64" in raw
         open(path, "wb").write(raw.replace(b"x86_64", b"x86_65", 1))
-        row = Ledger(path).get(cid)
-        content = {k: row[k] for k in ("subject", "predicate", "value", "world",
-                                       "by", "because", "replaces")}
-        print(f"  stored value                : {row['value']}")
-        print(f"  id still matches content    : {digest(content) == row['id']}")
-        print("  → content-addressing was claimed, not verified")
+        led2 = Ledger(path)
+        print(f"  rows recovered              : {len(led2.rows)} of 1, "
+              f"{led2.truncated} bytes cut")
+        if led2.rows:
+            row = led2.get(cid)
+            content = {k: row[k] for k in ("subject", "predicate", "value", "world",
+                                           "by", "because", "replaces")}
+            print(f"  stored value                : {row['value']}  "
+                  f"(id matches: {digest(content) == row['id']})")
+        else:
+            print("  x86_65 never enters the ledger: the frame failed its checksum")
 
         blob = bytearray(as_framed(claims(3)))
         blob[-20] ^= 0x01                             # corrupt inside the last frame

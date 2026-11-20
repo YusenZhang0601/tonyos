@@ -9,7 +9,7 @@
 - Settled: the thesis (the agent is the owner / the human is the constitution), the base (four predicates), no-go zones, the axiom of reversibility, memory and context rules, the license
 - Open: reference implementation list, map budget, `tick`, `*` for sensor facts, performance floors
 - Not started: the Screen, v0 install/rollback, anything below the ledger
-- Next: adopt the framed log (D-039); then concurrency — two agents, one world
+- Next: concurrency — two agents committing to one world
 - Side track: market watch, quarterly — `docs/COMPETITORS.md`, next sweep 2027-02-20
 
 ## Read these three

@@ -11,6 +11,8 @@ import json
 import os
 import time
 
+from store import frame, recover
+
 PREDICATES = {"is", "did", "may", "counts"}
 VERBS = {"read", "write", "send"}
 MODES = {"allow", "require", "deny"}
@@ -34,9 +36,17 @@ class Ledger:
         os.makedirs(os.path.dirname(path), exist_ok=True)
         self.rows = []
         self.duplicates = 0
+        self.truncated = 0
         if os.path.exists(path):
-            with open(path) as f:
-                self.rows = [json.loads(line) for line in f if line.strip()]
+            raw = open(path, "rb").read()
+            payloads, valid = recover(raw)
+            self.rows = [json.loads(p) for p in payloads]
+            if valid < len(raw):
+                # The tail never made it, or the first bad frame starts here. Cut it
+                # and keep the fact (D-039): a lost tail must be visible, not silent.
+                self.truncated = len(raw) - valid
+                with open(path, "r+b") as f:
+                    f.truncate(valid)
 
     # ---------------------------------------------------------------- writing
     def append(self, subject, predicate, value, world, by, because=(), replaces=()):
@@ -70,9 +80,12 @@ class Ledger:
             self.duplicates += 1
             return cid
         body = dict(content, id=cid, seq=len(self.rows) + 1, ts=round(time.time(), 3))
+        raw = json.dumps(body, sort_keys=True, ensure_ascii=False).encode()
+        with open(self.path, "ab") as f:
+            f.write(frame(raw))
+            f.flush()
+            os.fsync(f.fileno())          # the commit point (D-039)
         self.rows.append(body)
-        with open(self.path, "a") as f:
-            f.write(json.dumps(body, sort_keys=True, ensure_ascii=False) + "\n")
         return body["id"]
 
     # ---------------------------------------------------------------- reading
