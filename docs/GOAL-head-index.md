@@ -1,5 +1,9 @@
 # Goal: make the head O(1)
 
+> **Status: met** (2026-11-21). Evidence: `probe/README.md` pass 8, `probe/index.py`
+> and `probe/cost.py`.
+> The next stage is not opened here; see the three candidates in `docs/STATUS.md`.
+
 > A bounded stage. When every item below is verified, the stage is over. A new rule is
 > raised, not applied.
 

@@ -1,6 +1,6 @@
 # The probe
 
-Seven passes. **Its job is to be wrong**, so the design stops being self-validating.
+Eight passes. **Its job is to be wrong**, so the design stops being self-validating.
 
 ```bash
 python3 probe/demo.py
@@ -324,6 +324,72 @@ the disk. That is exactly the boundary the Rust core exists to move.
   without a daemon owning the log.
 - **A real power cut.** `fsync` is not a power cut; the file is on ext4.
 - **Rust.** Every number here is Python on two cores; none of it predicts the core.
+
+## Pass 8 — measure the commit path, then stop re-reading it
+
+The stage's premise was that pass 7's ceiling was the per-commit scan. The
+counters said something else, and the difference changed what was worth building.
+
+A. Before any fix (`probe/cost.py`), per commit:
+
+```
+path     w   per s   read B  reload  scans   rows  load ms  scan ms  wall ms
+locked   1    37.3     2597     1.0    2.0     20     0.43     0.03    26.80
+locked   8    18.8   107989     6.0    7.0    479    24.74     1.68    53.06
+locked  32     3.2   965582    24.1   25.1   3728   401.08    21.19   309.12
+group   32   382.2        0     0.0    2.0    320     0.00     0.33     2.72
+```
+
+**Suspect 1 was the ceiling in the locked path** — 24 full re-reads per commit at
+32 writers. **Suspect 2 was not**: the head scan was 0.33 ms of a 2.72 ms group
+commit. The premise was half wrong, and the counters said which half.
+
+B. `_exclusive` reads only the bytes appended since the last offset. Readers never
+truncate; only a writer cuts a tail.
+
+```
+locked 32: 3.2 -> 26.6/s; 966 KB -> 12.7 KB per commit; reload 24 -> 0;
+           load 401 ms -> 4.3 ms
+locked  8: 18.8 -> 32.2/s
+group    : unchanged (it never reloaded)
+```
+
+C. The head is a per-world index, rebuilt from the log on open. Verified in
+`probe/index.py`: 500 mixed operations, 43 worlds, 835 claims, **0 mismatches**
+against an independent brute-force head; a fresh `Ledger` on the same log rebuilds
+**0 mismatches**; after load, 50 pure commits do **0 scans and read 0 bytes**.
+
+```
+locked 32: 26.6 -> 31.5/s; scan 2.28 -> 0 ms
+group  32: 368 -> 453/s
+group.py 32: pass 7 255/s -> 590-617/s; batch 8.9 -> 21
+```
+
+### What pass 8 taught
+
+**A · The scan was cheap and expensive at the same time.** Its direct cost was
+0.3 ms. But it ran *under the write lock*, so each writer held the lock while
+scanning and only ~9 could enqueue per window. Removing it grew the batch to 21.
+The index bought **lock hold time**, not milliseconds.
+
+**B · A premise is not a measurement.** "The per-commit scan is the ceiling" was
+true only of the locked path, and even there the reload was 20x larger. Building
+the index first would have left the real bottleneck untouched.
+
+**C · The locked path is now fsync-bound.** 27 ms of a 31 ms commit. The group
+path at 617/s is bound by the commit path on two cores, not the device.
+
+**D · A pre-existing contradiction surfaced.** `active()` says "retracting a
+retraction brings the original back", but it is a one-pass cascade: a retracted by
+b, b retracted by c, and a stays dead. The index mirrors the implementation, not
+the comment. Raised in STATUS; not fixed here.
+
+### What pass 8 does not test
+
+- `visible()` still scans every row, and the whole log is in memory. The Screen and
+  scale will hit both.
+- A real power cut; Rust numbers; cross-process group commit (needs one owner of
+  the fsync).
 
 ## Still untested
 
