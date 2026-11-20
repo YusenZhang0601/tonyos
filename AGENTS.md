@@ -10,6 +10,7 @@
 - Open: the seam layer, reference implementation list, map budget
 - Not started: the Screen prototype, the probe, v0 install/rollback
 - Next: a probe — write the four predicates as a running ledger, starting with "install a package"
+- Side track: market watch, quarterly — `docs/COMPETITORS.md`, next sweep 2027-02-20
 
 ## Read these three
 
@@ -30,6 +31,7 @@ Reading only these three should be enough to start work. If it isn't, the writin
 | `docs/STATUS.md` | Current state and open rulings | Reference |
 | `docs/DECISIONS.md` | Decision log (append-only, with supersession chains) | Explanation |
 | `docs/JOURNAL.md` | Work log (one line per day) | Reference |
+| `docs/COMPETITORS.md` | Market and competitor snapshot (maintained side track) | Reference |
 | `docs/INDEX.tsv` | Repository index (generated, do not edit) | Reference |
 | `README.txt` | Testbed partitions and boot method (machine facts) | Reference |
 | `README.md` | Human-facing introduction | Tutorial |
@@ -73,6 +75,7 @@ Exit code 0 means the structure is intact. If it is red, fix the structure befor
 | What should I do now | `docs/STATUS.md` |
 | How is this machine partitioned, how does it boot | `README.txt` |
 | Where is a file | `docs/INDEX.tsv` |
+| Is anyone else doing this / what is the market | `docs/COMPETITORS.md` |
 
 ## Hard rules (to break one, first write a DECISION)
 
