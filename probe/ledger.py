@@ -142,6 +142,11 @@ class Ledger:
         self.scan_s = 0.0
         self.write_s = 0.0
         self._offset = 0
+        # The head index: a projection of the log, rebuilt on open, never stored.
+        self._heads = {}
+        self._root_world = {}
+        self._retractor_world = {}
+        self._dirty = set()
         if writable:
             # Loading and cutting a tail is a writer's job, and it needs the lock:
             # a reader that truncates can destroy a frame another process is writing.
@@ -194,12 +199,64 @@ class Ledger:
         payloads, valid = recover(raw)
         self._offset = valid
         self.rows = [json.loads(p) for p in payloads]
+        self._rebuild_heads()
         if valid < len(raw):
             self.truncated = len(raw) - valid
             if truncate:
                 with open(self.path, "r+b") as f:
                     f.truncate(valid)
         self.load_s += time.perf_counter() - t0
+
+    @staticmethod
+    def _is_root_row(row):
+        return (row["predicate"] == "is" and isinstance(row["value"], dict)
+                and "root" in row["value"])
+
+    def _rebuild_heads(self):
+        """The index is a projection: throw it away and derive it from the log."""
+        self._heads = {}
+        self._root_world = {}
+        self._retractor_world = {}
+        self._dirty = set()
+        for row in self.rows:
+            if self._is_root_row(row):
+                self._root_world[row["id"]] = row["world"]
+            for target in row["replaces"]:
+                if target in self._root_world:
+                    self._retractor_world[row["id"]] = self._root_world[target]
+        for row in self.active():
+            if self._is_root_row(row):
+                self._heads[row["world"]] = row["id"]
+
+    def _index_row(self, row):
+        """Update the head from one appended row. O(1) except for a rare retraction."""
+        if self._is_root_row(row):
+            self._root_world[row["id"]] = row["world"]
+            self._heads[row["world"]] = row["id"]
+        for target in row["replaces"]:
+            if target in self._root_world:
+                world = self._root_world[target]
+                if self._heads.get(world) == target:
+                    self._dirty.add(world)
+                self._retractor_world[row["id"]] = world
+            elif target in self._retractor_world:
+                # retracting a retraction can revive an older root
+                self._dirty.add(self._retractor_world[target])
+
+    def _recompute_head(self, world):
+        head = None
+        for row in self.active():
+            if self._is_root_row(row) and row["world"] == world:
+                head = row["id"]
+        if head:
+            self._heads[world] = head
+        else:
+            self._heads.pop(world, None)
+
+    def _settle(self):
+        for world in list(self._dirty):
+            self._recompute_head(world)
+            self._dirty.discard(world)
 
     def _sync_tail(self, truncate=False):
         """Read only what was appended since the last observed offset.
@@ -226,7 +283,10 @@ class Ledger:
         self.bytes_read += len(raw)
         payloads, valid = recover(raw)
         for p in payloads:
-            self.rows.append(json.loads(p))
+            row = json.loads(p)
+            self.rows.append(row)
+            self._index_row(row)
+        self._settle()
         self._offset += valid
         if valid < len(raw):
             self.truncated += len(raw) - valid
@@ -285,6 +345,10 @@ class Ledger:
         if self.group:
             ticket = self._batcher.enqueue(data)
             self.rows.extend(bodies)
+            self._offset += len(data)
+            for body in bodies:
+                self._index_row(body)
+            self._settle()
             if not defer:
                 self._batcher.wait(ticket)
             self.writes += 1
@@ -296,6 +360,10 @@ class Ledger:
             os.fsync(f.fileno())          # the commit point (D-039)
         self._fsyncs += 1
         self.rows.extend(bodies)
+        self._offset += len(data)
+        for body in bodies:
+            self._index_row(body)
+        self._settle()
         self.writes += 1
         self.write_s += time.perf_counter() - t0
         return None
@@ -329,16 +397,11 @@ class Ledger:
             self._write([body])
             return body["id"]
 
-    def _roots(self, world):
-        return [r for r in self.active()
-                if r["predicate"] == "is" and isinstance(r["value"], dict)
-                and "root" in r["value"] and r["world"] == world]
-
     def _head_checked(self, world, expect):
         """The parent viewpoint, or Conflict. A world with no root accepts a fork."""
-        roots = self._roots(world)
-        if roots:
-            cur = roots[-1]["id"]
+        self._settle()
+        cur = self._heads.get(world)
+        if cur:
             if cur != expect:
                 raise Conflict(f"{world}: expected {expect}, current {cur}")
             return cur
@@ -350,7 +413,7 @@ class Ledger:
     def bootstrap(self, world, files, by, because=()):
         """The first root of a world. Refuses if one already exists."""
         with self._exclusive(world):
-            if self._roots(world):
+            if self._heads.get(world):
                 raise Conflict(f"{world} already has a root")
             root = self._body("world", "is", {"root": {"files": files}},
                               world, by, because, [])
@@ -484,11 +547,11 @@ class Ledger:
         return self.get(cid)["seq"]
 
     def current_root(self, world):
-        roots = [r for r in self.active()
-                 if r["predicate"] == "is" and r["value"].get("root") and r["world"] == world]
-        if not roots:
+        self._settle()
+        head = self._heads.get(world)
+        if not head:
             raise NotFound(f"world {world} has no root")
-        return roots[-1]["id"]
+        return head
 
     def chain(self, cid):
         """Roots of the justification: they must be human signatures or sensors."""
