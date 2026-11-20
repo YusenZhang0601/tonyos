@@ -8,10 +8,9 @@ Design, plus a seven-pass probe (base at v0.15; no system yet)
 
 ## Working on
 
-**Stage complete: [`docs/GOAL-write-path.md`](GOAL-write-path.md)** — the write path is
-closed. One entry, one fsync per commit, group commit with a bounded window, and
-numbers. `probe/README.md` pass 7 has the evidence. Awaiting the owner's choice of the
-next stage (three candidates below).
+**Current stage: [`docs/GOAL-head-index.md`](GOAL-head-index.md)** — make the head O(1).
+Pass 7 closed the write path; its remaining ceiling is per-commit scanning. Measure the
+cause first, then read only the new tail and keep the head as a rebuildable index.
 
 Compressing "agent-native OS" from first principles into an executable base. Second round of rulings is on record: the substrate goes L1+L2 (L3 recorded as technical debt), `counts` is human-written with agent proposals, the probe runs in two steps, the licence is settled.
 
@@ -29,11 +28,8 @@ Nothing hard. Every open item is deliberately deferred, not stuck.
 5. **Done**: concurrency (E3). Without CAS, both writers "succeeded" and the world grew two heads with duplicate positions. With CAS under a per-world lock: exactly one winner, the loser gets a conflict and forks (D-040).
 6. **Done**: the write path is closed (pass 7). `append` refuses a root; CAS is in the store; one fsync per commit is 2.2x; group commit cuts `fsync/commit` to 0.16 at eight writers. The next ceiling is the commit path on two cores, not the disk.
 
-**Stage complete. Three candidates for the next stage, in the order I would pick them:**
+**Stage 2 chosen: the head index** (candidate 1). The other two remain candidates:
 
-1. **The head index.** The pass-7 ceiling is the per-commit scan (`active()` over every
-   row), not the device. Cache the current root per world; measure against pass 7.
-   Small, and it unblocks every later throughput number.
 2. **The Screen.** The four panels from CORE §6, rendered from projections. It is the
    first thing a human can use, and the handoff packet for a new brain.
 3. **The adapter boundary.** One real host through one thin adapter, against a 10-line

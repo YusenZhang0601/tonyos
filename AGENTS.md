@@ -9,7 +9,7 @@
 - Settled: the thesis (the agent is the owner / the human is the constitution), the base (four predicates), no-go zones, the axiom of reversibility, memory and context rules, the license
 - Open: reference implementation list, map budget, `tick`, `*` for sensor facts, performance floors
 - Not started: the Screen, v0 install/rollback, anything below the ledger
-- Next: awaiting the owner's choice of the next stage (three candidates in `docs/STATUS.md`)
+- Next: make the head O(1) — `docs/GOAL-head-index.md`; then the Screen
 - Side track: market watch, quarterly — `docs/COMPETITORS.md`, next sweep 2027-02-20
 
 ## Read these three
