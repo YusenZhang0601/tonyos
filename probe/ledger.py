@@ -15,6 +15,7 @@ import fcntl
 import hashlib
 import json
 import os
+import threading
 import time
 
 from store import frame, recover
@@ -40,15 +41,112 @@ class Conflict(Exception):
     """The head moved. The caller may retry or fork; it is never silent."""
 
 
+class Batcher:
+    """One fsync serves every commit that arrived during the window.
+
+    In-process only: a second process writing the same file cannot share an fsync
+    boundary. Cross-process writers use the locked, per-commit path.
+    """
+
+    def __init__(self, path, window=0.002):
+        self.fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o644)
+        self.cv = threading.Condition()
+        self.pending = []
+        self.next_ticket = 1
+        self.flushed = 0
+        self.fsyncs = 0
+        self.batches = 0
+        self.batch_sizes = []
+        self.stop = False
+        self.window = window
+        self.fail = None
+        self.thread = threading.Thread(target=self._run, daemon=True)
+        self.thread.start()
+
+    def enqueue(self, data):
+        with self.cv:
+            if self.fail:
+                raise self.fail
+            ticket = self.next_ticket
+            self.next_ticket += 1
+            self.pending.append((ticket, data))
+            self.cv.notify()
+            return ticket
+
+    def wait(self, ticket):
+        with self.cv:
+            while self.flushed < ticket:
+                if self.fail:
+                    raise self.fail
+                self.cv.wait()
+
+    def _run(self):
+        while True:
+            with self.cv:
+                while not self.pending and not self.stop:
+                    self.cv.wait(self.window)
+                if self.stop and not self.pending:
+                    return
+                # Condition.wait returns on notify, not only on timeout; loop to the
+                # deadline so the whole window is actually used.
+                deadline = time.monotonic() + self.window
+                while True:
+                    remaining = deadline - time.monotonic()
+                    if remaining <= 0:
+                        break
+                    self.cv.wait(remaining)
+                batch, self.pending = self.pending, []
+                target = batch[-1][0]
+            try:
+                os.write(self.fd, b"".join(data for _, data in batch))
+                os.fsync(self.fd)
+            except OSError as exc:                 # a failed fsync must not look like success
+                with self.cv:
+                    self.fail = exc
+                    self.cv.notify_all()
+                return
+            with self.cv:
+                self.fsyncs += 1
+                self.batches += 1
+                self.batch_sizes.append(len(batch))
+                self.flushed = target
+                self.cv.notify_all()
+
+    def close(self):
+        with self.cv:
+            self.stop = True
+            self.cv.notify_all()
+        self.thread.join()
+        os.close(self.fd)
+
+
 class Ledger:
-    def __init__(self, path, writable=True):
+    def __init__(self, path, writable=True, group=False, window=0.002):
         self.path = path
         self.writable = writable
+        self.group = group and writable
+        self._mu = threading.RLock()
         os.makedirs(os.path.dirname(path), exist_ok=True)
         self.rows = []
         self.duplicates = 0
         self.truncated = 0
+        self._batcher = Batcher(path, window) if self.group else None
+        self._fsyncs = 0
         self._load(truncate=writable)
+
+    def close(self):
+        if self._batcher:
+            self._batcher.close()
+
+    @property
+    def fsyncs(self):
+        return self._batcher.fsyncs if self._batcher else self._fsyncs
+
+    @property
+    def batch_stats(self):
+        if not self._batcher:
+            return (0, [])
+        return (self._batcher.batches, list(self._batcher.batch_sizes))
 
     # ------------------------------------------------------------------ storage
     def _load(self, truncate=False):
@@ -74,6 +172,10 @@ class Ledger:
         re-reads it. Sharding the log is a later step, and it needs its own probes.
         """
         assert self.writable, "this ledger was opened read-only"
+        if self.group:                         # in-process only; see Batcher
+            with self._mu:
+                yield
+            return
         with open(self.path + ".lock", "a+") as lock:
             fcntl.flock(lock, fcntl.LOCK_EX)
             try:
@@ -95,19 +197,31 @@ class Ledger:
         }
         return dict(content, id=digest(content), seq=0, ts=round(time.time(), 3))
 
-    def _write(self, bodies):
-        """Write frames and make them durable. Positions are assigned here."""
+    def _write(self, bodies, defer=False):
+        """Write frames and make them durable. Positions are assigned here.
+
+        `defer` is for the group path: enqueue under the lock, wait outside it, so
+        neighbours can join the same fsync.
+        """
         assert bodies, "nothing to write"
         base = len(self.rows)
         for i, body in enumerate(bodies):
             body["seq"] = base + i + 1
         data = b"".join(frame(json.dumps(b, sort_keys=True, ensure_ascii=False).encode())
                         for b in bodies)
+        if self.group:
+            ticket = self._batcher.enqueue(data)
+            self.rows.extend(bodies)
+            if not defer:
+                self._batcher.wait(ticket)
+            return ticket
         with open(self.path, "ab") as f:
             f.write(data)
             f.flush()
             os.fsync(f.fileno())          # the commit point (D-039)
+        self._fsyncs += 1
         self.rows.extend(bodies)
+        return None
 
     # ------------------------------------------------------------------ writing
     def append(self, subject, predicate, value, world, by, because=(), replaces=()):
@@ -168,16 +282,30 @@ class Ledger:
 
     def commit(self, world, files, by, expect, because=(), replaces=()):
         """Advance a world: one did + one root, under a compare-and-swap on the head."""
+        if self.group:
+            with self._mu:
+                parent = self._head_checked(world, expect)
+                did, root = self._commit_bodies(world, files, by, parent, because, replaces)
+                ticket = self._write([did, root], defer=True)
+            self._batcher.wait(ticket)         # outside the lock: neighbours batch in
+            return root["id"]
         with self._exclusive(world):
             parent = self._head_checked(world, expect)
-            did = self._body(by, "did",
-                             {"verb": "write", "view": parent, "result": {"files": files}},
-                             world, by, list(because) + [parent], [])
-            root = self._body("world", "is", {"root": {"files": files}},
-                              world, by, [did["id"]], list(replaces))
-            self._write([did])
-            self._write([root])           # B: one fsync for both, next step
+            did, root = self._commit_bodies(world, files, by, parent, because, replaces)
+            # One write, one fsync: the commit point covers both frames. An orphan
+            # did can still survive if the two frames straddle a page boundary and
+            # only the first page reaches the disk; that means "the attempt was
+            # recorded, the world did not advance" (§4.7), not a committed write.
+            self._write([did, root])
             return root["id"]
+
+    def _commit_bodies(self, world, files, by, parent, because, replaces):
+        did = self._body(by, "did",
+                         {"verb": "write", "view": parent, "result": {"files": files}},
+                         world, by, list(because) + [parent], [])
+        root = self._body("world", "is", {"root": {"files": files}},
+                          world, by, [did["id"]], list(replaces))
+        return did, root
 
     def tick(self, world, by, expect, because=()):
         """Same tree, later position. Time must be able to advance without the world."""
@@ -266,6 +394,10 @@ class Ledger:
         return [row for row in live
                 if row["world"] == "*"
                 or any(row["world"] == w and row["seq"] <= cutoff for w, cutoff in windows)]
+
+    def reload(self):
+        """Refresh this reader's view. A writer re-reads inside the lock anyway."""
+        self._load(truncate=False)
 
     def seq_of(self, cid):
         return self.get(cid)["seq"]
