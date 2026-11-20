@@ -323,6 +323,8 @@ the disk. That is exactly the boundary the Rust core exists to move.
 - **Cross-process group commit.** Two processes cannot share an `fsync` boundary
   without a daemon owning the log.
 - **A real power cut.** `fsync` is not a power cut; the file is on ext4.
+- **Per-world locking.** The store is one file, so the write lock is per ledger, not
+  per world. Sharding the log is untested; the design says contention is per world.
 - **Rust.** Every number here is Python on two cores; none of it predicts the core.
 
 ## Pass 8 — measure the commit path, then stop re-reading it

@@ -22,6 +22,8 @@ Three modes for `may`: `allow` / `require` / `deny`.
 Three forms for `counts`: identity / satisfaction / representation.
 
 Nothing else. A requirement that will not translate belongs outside the core.
+A `did` is an event and is never retracted; `is` / `may` / `counts` are beliefs and
+reach a fixpoint, so retracting a retraction restores the original.
 
 ## 3. Describe, compute, ask
 
@@ -44,7 +46,7 @@ Enforcement lives in the hand — the executor — never in the agent's good int
 
 ## 5. Nothing is ever modified
 
-Only a new version plus a pointer swap. So there are no locks, no torn writes, no backups, no restores, no merge conflicts.
+Only a new version plus a pointer swap. So there are no data locks, no torn writes, no backups, no restores, no merge conflicts. One short write lock guards the head (D-040); readers never take it.
 Two primitives: **fork** (free) and **prune** (automatic, by reachability).
 Everything lands in a **world**; only rules and definitions may be global. There is no global "now", only an observer's projection of one total order.
 A claim's name is its content, never its position — so two nodes can agree without coordinating.

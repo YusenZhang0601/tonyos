@@ -4,7 +4,7 @@
 
 ## Phase
 
-Design, plus an eight-pass probe (base at v0.15; no system yet)
+Design, plus an eight-pass probe (base at v0.16; no system yet)
 
 ## Working on
 
@@ -15,7 +15,10 @@ fixed; the index's real value was cutting lock hold time, which grew the batch f
 9 to 21. `probe/README.md` pass 8 has the evidence. Awaiting the owner's choice of the
 next stage (three candidates below).
 
-Compressing "agent-native OS" from first principles into an executable base. Second round of rulings is on record: the substrate goes L1+L2 (L3 recorded as technical debt), `counts` is human-written with agent proposals, the probe runs in two steps, the licence is settled.
+**Handoff:** all probes are green and the branch is clean. Tomorrow starts by choosing
+one of the three candidates; nothing is half-finished.
+
+Compressing "agent-native OS" from first principles into an executable base. Second round of rulings is on record: the substrate goes L1+L2 (L3 recorded as technical debt), `counts` is human-written with agent proposals, the probe has eight passes, the licence is settled.
 
 ## Blocked
 
@@ -50,17 +53,19 @@ The success test: **if one real event cannot be written in four predicates withi
 
 ## Open rulings
 
-- **Reference implementation list** (D-021): deferred; review after the throughput probe.
+- **Reference implementation list** (D-021): deferred; review before the first non-probe implementation.
 - **Map budget** (D-022): deferred; review once a first map exists.
 - **`tick`**: is a root claim with an unchanged tree enough to advance time, or does it need its own verb?
 - **`*` scope**: should global be limited to `may`/`counts`, or do sensor facts about the machine also belong above worlds?
 - **Trust root** (D-033): only the assumption claim is implemented; measurement is deferred with triggers.
 - **v0 install / rollback**: how it lands on the existing four partitions — not designed yet.
 - **Genuinely simultaneous conflicts**: two contradictory instructions from the human at the same instant — not designed yet.
-- **Performance floors** (D-037): each tier needs a floor or ceiling, or "third" means "unbounded". The baseline now exists (38/s per-commit, 3,586/s grouped); the numbers still need the owner's sign-off.
+- **Performance floors** (D-037): each tier needs a floor or ceiling, or "third" means "unbounded". The baseline now exists (39/s per-commit; ~600/s grouped at 32 writers); the numbers still need the owner's sign-off.
 - **Repeated identical `did`s** (D-038): they collapse into one event. Is "it looked twice" part of the audit trail, and does that require a per-author counter?
 - **Mid-file corruption** (D-039): recovery stops at the first bad frame. Whether a scrub may resync past it and recover later frames is not decided.
-- **Group commit and durability** (D-037/D-039): one fsync covers many claims, so "committed" becomes a batch boundary. How that is reported to a waiting writer is not yet specified.
+- **Group commit and durability** (D-037/D-039): a writer now waits for the fsync that
+  covers its claim. Whether the batch boundary is itself a claim — for audit — is not
+  decided.
 - **Where a conflict is recorded** (D-040): `did` cannot be global, and the world it failed to advance is the one it must not write to.
 - **Failed attempts across a crash** (D-040): surviving one costs a second fsync. Worth it, or is "the world did not move" enough?
 - **Cross-process group commit** (D-037/D-040): two processes cannot share an `fsync`

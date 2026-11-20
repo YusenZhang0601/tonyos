@@ -3,7 +3,7 @@
 > **The single source of design authority.** If an implementation disagrees with this document, this document wins.
 > **Start with [`CORE.md`](CORE.md)** — one page. This file is the manual behind it: read it when you need the *why*.
 > To change it, first record a ruling in `docs/DECISIONS.md`.
-> Version: v0.15 · 2026-11-20
+> Version: v0.16 · 2026-11-21
 
 ### Terminology
 
@@ -73,6 +73,9 @@ claim
   because   [claim id...]   evidence is itself claims; recursion bottoms out
   replaces  [claim id...]   retraction, not deletion
 ```
+
+> A `did` is an event: it cannot be retracted. `replaces` applies to beliefs and rules,
+> and activity is a fixpoint — retracting a retraction restores the original (D-041).
 
 | Predicate | Answers | How it fails |
 |---|---|---|
@@ -257,7 +260,7 @@ The red line cannot live in the agent's good intentions. It must live at the **a
 
 > **Nothing is ever modified; there is only a new version plus a pointer swap.**
 
-Once this holds, these all disappear: locks, half-written state, torn writes, backups, restores, dirty reads, merge conflicts — because nothing is ever changed in place.
+Once this holds, these all disappear: **data** locks, half-written state, torn writes, backups, restores, dirty reads, merge conflicts — because nothing is ever changed in place. One short write lock still guards the head (D-040): it serialises writers, never readers, and is not a data lock.
 
 ### 4.2 Only two primitives remain
 
@@ -507,7 +510,10 @@ Rust was chosen for longevity and for memory safety at the enforcement point. Co
 
 ---
 
-## 10. Test cases: ten already passed
+## 10. Test cases: ten scenarios, ten paper arguments
+
+> ✔ means the vocabulary can express the case — an argument, not a test. None of the
+> ten has been run as an experiment; those live in `probe/README.md`.
 
 | # | Scenario | Result |
 |---|---|---|
@@ -534,7 +540,7 @@ They let you **write down** anything; they cannot make **decisions** for you: wh
 
 ## 11. Open questions
 
-1. **The seam layer** — deferred (D-014). Wait until the probe shows which boundaries are actually replaced.
+1. **The seam layer** — **closed by D-028**: the seam is the adapter boundary, one ABI plus N thin adapters.
 2. **The reference implementation list** — deferred (D-021).
 3. **The map budget** — how many bytes "one screen" is — deferred (D-022).
 4. **`counts` vocabulary governance** — whether "human writes, agent proposes" is enough to prevent bloat; verify in the prototype (D-019).

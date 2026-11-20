@@ -6,7 +6,7 @@ Not "a desktop with an AI installed". An attempt to start over from first princi
 
 ## What this is
 
-**Design stage.** There is a Python probe (`probe/`) that exercises the vocabulary and breaks it three times over. There is no system: no boot, no storage engine, no adapter.
+**Design stage.** There is a Python probe (`probe/`) that has broken the vocabulary eight times over. There is no system yet: no boot, no adapter, and the store is still a file.
 
 What is already settled matters more than code:
 
@@ -14,6 +14,7 @@ What is already settled matters more than code:
 - **No-go zones** — not a sandbox allowlist. The human draws a ring; inside it requires approval; outside it is allowed by default.
 - **The axiom of reversibility** — there is no "modify", only "a new version plus a pointer swap". Undo and restore are words that should not exist.
 - **Default: don't load** — history is a library, not the air. Nothing may enter the agent's context on its own.
+- **Events vs beliefs** — a `did` is history and cannot be retracted; rules and beliefs can be, to a fixpoint. That is what keeps a spent approval spent.
 
 The full derivation is in [`design/FOUNDATION.md`](design/FOUNDATION.md). Every tradeoff — and every conclusion that was later overturned — is on record in [`docs/DECISIONS.md`](docs/DECISIONS.md).
 
