@@ -262,3 +262,15 @@ Overturned entries are **never deleted**: they are marked "superseded by D-0xx",
 - **Ruling**: **first principles first; performance second; elegance third** — as a system-wide guiding order, not a rule about any one module. Elegance already includes readability, maintainability and consistency, so "it will be easier to maintain later" is not a fourth tier. Operationally, every design tradeoff must state **which of the three it gave up**: elegance (allowed, no reason needed) / performance (allowed, but it must carry a number) / first principles (not allowed, except as an explicitly recorded exception).
 - **Consequences**: the first application is §4.3 — one global reference and one global compare-and-swap becomes **one reference per world**. Contention then exists only inside a world, and worlds are already isolated by design. This changes no axiom: nothing is still ever modified, and the system is still reversible; only a piece of tidiness was given up.
 - **Relations**: revises FOUNDATION §4.3; same root as D-017 — both say *align with the machine's real behaviour, not with how the diagram looks*.
+
+## D-037 Performance order: concurrency and throughput, then latency, then footprint
+
+- **Context**: D-036 put performance above elegance but never said *which* performance. "All-round good" is a wish, not a budget: when two designs trade off, something must break the tie. The owner set the internal order explicitly.
+- **Ruling**: when designs trade off, prefer **concurrency and throughput** first, **latency** second, **resource footprint** third. Boot time counts as latency. As with D-036, a tradeoff must name the tier it spent: spending footprint needs no argument, spending latency needs a number, spending throughput needs an explicit exception.
+- **Consequences** (derived, each to be tested rather than assumed):
+  - Any **global serialisation point on the write path** is now the first suspect, not a footnote. The probe's global `seq` is the named suspect.
+  - Per-commit `fsync` bounds throughput at the device; this ordering therefore **predicts group commit** — spend latency, buy throughput. That is the ordering working as intended, not a regression.
+  - On one block device, software must not serialise what the device would allow. The target is **no self-inflicted serialisation**, not "unlimited concurrency": two cores cannot demonstrate 64-core scaling, only the absence of a lock convoy.
+  - Footprint is third, not free. Each tier still needs a floor or ceiling, or "third" silently becomes "unbounded" on a 3.7 GB machine.
+- **Falsifier**: if on this machine `fsync` is not the throughput ceiling, group commit buys nothing and the predicted consequence is wrong. Measure before building it.
+- **Relations**: refines D-036; makes the global-order question (FOUNDATION §4.3, probe question 6) urgent rather than open-ended.

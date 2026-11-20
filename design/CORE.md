@@ -81,6 +81,8 @@ Not a programming language. Not a sandbox. Not a dashboard. Not an agent framewo
 
 **Principles, then performance, then elegance.** Elegance includes maintainability, so "easier to maintain later" is not a fourth argument.
 
+Inside performance: **concurrency and throughput, then latency, then footprint.** Boot time is latency.
+
 A tradeoff must say which one it gave up: elegance needs no reason / performance needs a number / a principle needs to be recorded as an exception.
 
 ## 12. The test

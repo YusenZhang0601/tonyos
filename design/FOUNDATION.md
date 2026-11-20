@@ -3,7 +3,7 @@
 > **The single source of design authority.** If an implementation disagrees with this document, this document wins.
 > **Start with [`CORE.md`](CORE.md)** — one page. This file is the manual behind it: read it when you need the *why*.
 > To change it, first record a ruling in `docs/DECISIONS.md`.
-> Version: v0.13 · 2026-11-20
+> Version: v0.14 · 2026-11-20
 
 ### Terminology
 
@@ -421,6 +421,10 @@ Each adapter session issues a capability token. The `by` field stops being a sel
 1. **No new layers.** Functionality may only be added as an observer, a claim, or a projection. A mess is not too much code; it is unclear boundaries.
 2. **Exactly one hot path**: action → audit trail → projection. A second path means a second truth.
 3. **Measure from week one**: end-to-end action latency. "Extreme performance" that is not measured is folklore. A 2-core machine is the whetstone.
+
+**The performance order (D-037)**: concurrency and throughput first, latency second, resource footprint third. Boot time is latency. "All-round good" is not a budget; the ranking is what decides a tradeoff. Spending footprint needs no argument, spending latency needs a number, spending throughput needs an explicit exception — the mirror of D-036's three tiers.
+
+Corollary: a global serialisation point on the write path is a design defect until measured otherwise. Concurrency is not "unlimited"; on two cores the honest target is **no self-inflicted serialisation**, which is measurable, not scalable-to-64-cores, which is not.
 
 **The five gates of "exemplary" (for reference implementations)**: readable on one screen / zero external dependencies / explicit memory and latency bounds / replaceable without hurting others / no configuration files.
 
