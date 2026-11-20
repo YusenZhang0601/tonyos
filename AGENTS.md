@@ -85,6 +85,12 @@ Exit code 0 means the structure is intact. If it is red, fix the structure befor
 4. **Never delete old text**: mark it superseded and leave a back-pointer.
 5. **Every judgement must state what would refute it.** If you cannot, it is a slogan — rejected.
 6. **Default: don't load**: except for the map, nothing may enter the context on its own.
+7. **Done means evidence.** A completion claim without evidence is a *proposal*, not a result.
+   - "it works" → name the command and paste its output.
+   - "it's the same" → say what was compared, and how.
+   - "I fixed it" → say what was broken and what now passes.
+   - Anything not run must be labelled **not verified**. A gap is left open; it is never filled with a guess.
+   - A design choice discovered while implementing is **raised**, not applied.
 
 ## License (one line)
 

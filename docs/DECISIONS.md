@@ -206,3 +206,10 @@ Overturned entries are **never deleted**: they are marked "superseded by D-0xx",
 - **Ruling**: do not build agents. Solve M×N with one ABI plus N thin adapters. **The seam is the adapter boundary** (closing D-014). **MCP is an adapter, not the ABI** — the same discipline that keeps kernel abstractions out of the core. Each adapter session issues a capability token, so `by` becomes an authenticated identity rather than a self-description — this is also the answer to the previously unrecorded gap: **who may append to the ledger**.
 - **Consequences**: adapters must contain no logic, or they become privileged components. Continuity lives in the ledger, so any agent can take over. Multi-vendor support is not a feature but the point: *any agent lives better here*.
 - **Relations**: **closes D-014**; resolves the append-authority gap noted in the 2026-11-20 retrospective; supports D-008 (per-observer projection).
+
+## D-029 Done means evidence; plausibility is not proof
+
+- **Context**: the owner named the failure mode directly — the AI produces what was asked for, the output *looks* finished, nothing is verified, and someone inherits the mess ("管杀不管埋"). It is the pattern that spread with vibe coding, and it is cheap to fall into because a model optimises for plausible, not for true. This session came close three times: a whole-repository translation verified only mechanically (no human read the English), two design choices applied during the probe without a ruling, and 28 decisions taken against zero run results.
+- **Ruling**: a completion claim must carry evidence — the command run and where its output is. Anything not run is labelled **not verified**. A gap is left open rather than filled with a guess. A design choice found while implementing is raised, not applied.
+- **Consequences**: work is slower, and reports will sometimes end in "not verified". Accepted deliberately: the product is accountability, so the method that builds it cannot be "it looks right".
+- **Relations**: refines D-002 (the human signs); structurally the same rule as D-019 — an agent's claim only becomes real when it carries something outside itself.
