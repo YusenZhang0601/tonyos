@@ -68,5 +68,24 @@ if [ -f design/FOUNDATION.md ]; then
   fi
 fi
 
+# 7. every indexed path must exist (an index entry for a missing file is rot)
+if [ -f docs/INDEX.tsv ]; then
+  while IFS=$'\t' read -r path _; do
+    [ "$path" = "path" ] && continue
+    [ -e "$path" ] || fail "index points at a missing file: $path"
+  done < docs/INDEX.tsv
+fi
+
+# 8. every D-0xx reference must resolve to an entry in the decision log
+if [ -f docs/DECISIONS.md ]; then
+  missing=$(comm -23 \
+    <(grep -rhoE '\bD-0[0-9][0-9]\b' --include='*.md' . 2>/dev/null | sort -u) \
+    <(grep -oE '^## (D-0[0-9][0-9])' docs/DECISIONS.md | grep -oE 'D-0[0-9][0-9]' | sort -u))
+  if [ -n "$missing" ]; then
+    fail "decision references with no entry:"
+    printf '%s\n' "$missing" | sed 's/^/      /'
+  fi
+fi
+
 printf -- '---\n%d error / %d warn\n' "$err" "$warn"
 [ "$err" -eq 0 ]

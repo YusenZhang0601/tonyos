@@ -58,7 +58,7 @@ Overturned entries are **never deleted**: they are marked "superseded by D-0xx",
 
 - **Context**: global state and a shared pointer introduce locks, contention and the question of whose truth wins.
 - **Ruling**: guarantee only "what happened, in what order"; state is an observer's projection. There is no global "now".
-- **Consequences**: no global lock; consistency is required only at the boundaries (no-go zones, audit trail); the only contention left is who may advance the reference (a single compare-and-swap).
+- **Consequences**: no global lock; consistency is required only at the boundaries (no-go zones, audit trail); the only contention left is who may advance a world's reference. **Revised by D-036**: that compare-and-swap is *per world*, not global — a single global reference would be a cache-line hotspot.
 - **Relations**: supports D-011.
 
 ## D-009 Explicit amendment (mandatory supersession chain)

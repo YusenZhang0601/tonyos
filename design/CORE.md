@@ -29,6 +29,8 @@ Nothing else. A requirement that will not translate belongs outside the core.
 - **compute** → a projection (a reference implementation)
 - **ask** → the map, which is the catalogue of projections
 
+A projection answers **for a viewpoint** — a root claim that pins the branch, the moment and the tree at once. It never reads the ledger directly; the store hands it one slice, so it cannot consult another world by accident.
+
 A derivation is not explained, it is **reproduced**: `because = [inputs…, hash of the projection's code]`.
 A deterministic projection is a derivation. A non-deterministic one — an LLM — is a claim, and must be held to account.
 
@@ -38,12 +40,16 @@ A deterministic projection is a derivation. A non-deterministic one — an LLM �
 The red line is `send`: the only action that leaves your ownership, therefore the only irreversible one.
 Enforcement lives in the hand — the executor — never in the agent's good intentions.
 
+**One signature, one act.** Using an approval spends it; the act and the spending are the same claim. Expiry is a position in the ledger, never a wall-clock time.
+
 ## 5. Nothing is ever modified
 
 Only a new version plus a pointer swap. So there are no locks, no torn writes, no backups, no restores, no merge conflicts.
 Two primitives: **fork** (free) and **prune** (automatic, by reachability).
-There is no global "now", only each observer's projection of one total order.
+Everything lands in a **world**; only rules and definitions may be global. There is no global "now", only an observer's projection of one total order.
 "Back to yesterday" is not a restore, it is an as-of query.
+
+**One reference per world, never one for the machine.** Worlds share no state, so they share no pointer. A single global reference is a cache-line hotspot — the lesson RCU taught Linux.
 
 ## 6. Memory
 
@@ -71,6 +77,12 @@ Target: the only foreign code in the system is `vmlinuz` and hardware firmware.
 
 Not a programming language. Not a sandbox. Not a dashboard. Not an agent framework.
 
-## 11. The test
+## 11. What comes first
+
+**Principles, then performance, then elegance.** Elegance includes maintainability, so "easier to maintain later" is not a fourth argument.
+
+A tradeoff must say which one it gave up: elegance needs no reason / performance needs a number / a principle needs to be recorded as an exception.
+
+## 12. The test
 
 **If one real event cannot be written in four predicates within one screen, the vocabulary is wrong.**
