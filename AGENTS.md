@@ -36,6 +36,7 @@ Reading only these three should be enough to start work. If it isn't, the writin
 | `LICENSING.md` | How code, docs and name are licensed | Reference |
 | `TRADEMARK.md` | Rules for the name and official builds | Reference |
 | `CLA.md` | Contributor License Agreement | Reference |
+| `probe/` | The probe: a runnable ledger, and what it broke (`probe/README.md`) | How-to |
 | `tools/index.sh` | Generate the index | How-to |
 | `tools/check.sh` | The gate | How-to |
 

@@ -18,9 +18,8 @@ Nothing hard. Every open item is deliberately deferred, not stuck.
 
 0. *(optional)* A one-page core: compress FOUNDATION (≈500 lines) into the screen the map is supposed to fit on. If it will not compress, the core is not clear yet.
 
-1. Probe step one: **install a package**, in the fake world at `/lab/probe/world/`, running
-`read → write → reference advance → rollback`, producing a readable ledger plus two projections ("what it is doing" / "what it needs from you").
-2. Step two then hits the `send` red line with an email.
+1. **Done**: probe step one (install a package) — see `probe/README.md`. Four rulings it asks for are listed below.
+2. Probe step two: hit the `send` red line with a real approval flow.
 
 The success test: **if one real event cannot be written in four predicates within one screen, the vocabulary is wrong.**
 
@@ -28,6 +27,10 @@ The success test: **if one real event cannot be written in four predicates withi
 
 - **Reference implementation list** (D-021): deferred; review after both probes.
 - **Map budget** (D-022): deferred; review once a first map exists.
+- **Claim scope** (probe finding 1): every claim needs a `world` field, not a value key.
+- **Projection signature** (finding 2): the world must be a required argument, enforced by the API.
+- **Batch `did`** (finding 6): one file one claim will not scale; a manifest/aggregate form is needed.
+- **First signature** (finding 5): how the root of trust is grounded — the measured boot chain's job.
 - **v0 install / rollback**: how it lands on the existing four partitions — not designed yet.
 - **Genuinely simultaneous conflicts**: two contradictory instructions from the human at the same instant — not designed yet.
 

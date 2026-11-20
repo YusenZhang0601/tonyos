@@ -48,7 +48,7 @@ m=$(grep -c '^- \*\*Relations\*\*' docs/DECISIONS.md 2>/dev/null); [ -z "${m:-}"
 # 5. the index may only contain project paths (catches local env files by construction)
 if [ -f docs/INDEX.tsv ]; then
   bad=$(tail -n +2 docs/INDEX.tsv | cut -f1 | grep -vE \
-    '^(AGENTS\.md|README\.(md|txt)|LICENSING\.md|TRADEMARK\.md|CLA\.md|CONTRIBUTORS\.md|design/[^/]+\.md|docs/[^/]+\.(md|tsv)|tools/[^/]+\.sh)$' || true)
+    '^(AGENTS\.md|README\.(md|txt)|LICENSING\.md|TRADEMARK\.md|CLA\.md|CONTRIBUTORS\.md|design/[^/]+\.md|docs/[^/]+\.(md|tsv)|probe/[^/]+\.(md|py)|tools/[^/]+\.sh)$' || true)
   if [ -n "$bad" ]; then
     fail "index contains non-project paths:"
     printf '%s\n' "$bad" | sed 's/^/      /'
