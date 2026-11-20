@@ -6,7 +6,7 @@ Not "a desktop with an AI installed". An attempt to start over from first princi
 
 ## What this is
 
-**Design stage. There is no code yet.**
+**Design stage.** There is a Python probe (`probe/`) that exercises the vocabulary and breaks it three times over. There is no system: no boot, no storage engine, no adapter.
 
 What is already settled matters more than code:
 

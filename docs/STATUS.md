@@ -4,7 +4,7 @@
 
 ## Phase
 
-Design (the base is at v0.13; no code yet)
+Design, plus a three-pass probe (base at v0.13; no system yet)
 
 ## Working on
 

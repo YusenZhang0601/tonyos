@@ -5,11 +5,11 @@
 
 ## Current state (≤12 lines)
 
-- Phase: **design** (no code yet)
+- Phase: **design**, with a three-pass probe (Python). No system yet.
 - Settled: the thesis (the agent is the owner / the human is the constitution), the base (four predicates), no-go zones, the axiom of reversibility, memory and context rules, the license
-- Open: the seam layer, reference implementation list, map budget
-- Not started: the Screen prototype, the probe, v0 install/rollback
-- Next: a probe — write the four predicates as a running ledger, starting with "install a package"
+- Open: reference implementation list, map budget, whether `tick` needs a verb, whether sensor facts may be global
+- Not started: the Screen, v0 install/rollback, anything below the ledger
+- Next: a concurrency probe — two agents committing to one world
 - Side track: market watch, quarterly — `docs/COMPETITORS.md`, next sweep 2027-02-20
 
 ## Read these three
