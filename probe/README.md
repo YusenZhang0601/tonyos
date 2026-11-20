@@ -1,6 +1,6 @@
 # The probe
 
-Six passes. **Its job is to be wrong**, so the design stops being self-validating.
+Seven passes. **Its job is to be wrong**, so the design stops being self-validating.
 
 ```bash
 python3 probe/demo.py
@@ -269,6 +269,61 @@ access.
 The race is **forced** (both read, then wait). It proves the schedule is
 reachable, not how often it occurs. Cross-node concurrency, and a crash between
 the `did` and the root, are still untested.
+
+## Pass 7 — one entry, one fsync, one batch
+
+The write path, closed. Roots can only be written by `commit` / `tick` /
+`rollback` / `bootstrap`; `append` refuses a root. The head check, the position
+and the write are one critical section inside the store (D-040). Both frames of a
+commit share one `fsync`. Group commit is in-process and bounded by a 2 ms window.
+
+Same world, 1.5 s per cell, retries charged to the writer:
+
+```
+path     writers  commits   per s   p50 ms   p99 ms  fsync/commit  batch
+locked         1       58      39    25.1     40.4          1.00      —
+locked         2       38      25    44.6    581.8          1.00      —
+locked         4       42      28    38.6   1179.0          1.00      —
+locked         8       40      27   172.5   1968.1          1.00      —
+group          1       49      33    32.9     42.3          1.02      1.0
+group          2      106      71    26.2     43.4          0.51      2.0
+group          4      177     118    33.8     55.0          0.26      3.9
+group          8      292     195    38.0     78.7          0.16      6.4
+group         16      347     231    65.2    244.0          0.11      8.7
+group         32      371     247    81.4    709.0          0.11      8.3
+```
+
+Window sweep at 8 writers: 2 ms → 166/s, 5 ms → 185/s, 10 ms → 181/s; the batch
+moves 6.4 → 7.0 → 7.6. A wider window does not buy much: the writers are the limit.
+
+### What pass 7 taught
+
+**A · The guard is real.** `append` a root → refused. A commit with a bad head →
+`Conflict`. Five of five rounds still produce exactly one winner, and the loser
+forks (D-040).
+
+**B · One fsync is 2.2x.** 18.8 → 39.4 commits/s. The second fsync was buying
+nothing the world needed: an orphan `did` already means "did not happen".
+
+**C · Group commit works, but the batch cannot exceed the writers.** A writer
+waits for its own durability before issuing the next commit, so a batch is at
+most the number of concurrent writers. `fsync/commit` falls to 0.16 at 8 writers.
+
+**D · The tail improves more than the mean.** Locked at 8 writers: p50 172 ms,
+p99 1,968 ms. Group at 8: p50 38 ms, p99 79 ms. Contention was the tail.
+
+**E · The 35x from E1 is not reproduced, and should not be.** E1 measured raw
+appends that never waited for durability. A waiting commit is bounded by
+`writers / (fsync + window)`. At 16–32 writers the batch plateaus at 8–9 and
+throughput at ~250/s: the ceiling is the commit path on two cores in Python, not
+the disk. That is exactly the boundary the Rust core exists to move.
+
+### What pass 7 does not test
+
+- **Cross-process group commit.** Two processes cannot share an `fsync` boundary
+  without a daemon owning the log.
+- **A real power cut.** `fsync` is not a power cut; the file is on ext4.
+- **Rust.** Every number here is Python on two cores; none of it predicts the core.
 
 ## Still untested
 

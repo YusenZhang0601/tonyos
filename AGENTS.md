@@ -5,11 +5,11 @@
 
 ## Current state (≤12 lines)
 
-- Phase: **design**, with a six-pass probe (Python). No system yet.
+- Phase: **design**, with a seven-pass probe (Python). No system yet.
 - Settled: the thesis (the agent is the owner / the human is the constitution), the base (four predicates), no-go zones, the axiom of reversibility, memory and context rules, the license
 - Open: reference implementation list, map budget, `tick`, `*` for sensor facts, performance floors
 - Not started: the Screen, v0 install/rollback, anything below the ledger
-- Next: cut commit cost (one fsync, then group commit); then the Screen
+- Next: awaiting the owner's choice of the next stage (three candidates in `docs/STATUS.md`)
 - Side track: market watch, quarterly — `docs/COMPETITORS.md`, next sweep 2027-02-20
 
 ## Read these three

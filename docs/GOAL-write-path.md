@@ -1,5 +1,9 @@
 # Goal: close the write path
 
+> **Status: met** (2026-11-20). Evidence: `probe/README.md` pass 7 and the report in
+> `docs/JOURNAL.md`. The next stage is not opened here; see the three candidates in
+> `docs/STATUS.md`.
+
 > A bounded stage, not a direction. When every item below is verified, the stage is
 > over. If a new rule is needed, it is raised, not applied.
 

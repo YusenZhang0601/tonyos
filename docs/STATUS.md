@@ -4,13 +4,14 @@
 
 ## Phase
 
-Design, plus a three-pass probe (base at v0.13; no system yet)
+Design, plus a seven-pass probe (base at v0.15; no system yet)
 
 ## Working on
 
-**Current stage: [`docs/GOAL-write-path.md`](GOAL-write-path.md)** — close the write path
-(one entry, one fsync, group commit, numbers). The stage is over when its Definition of
-done is verified.
+**Stage complete: [`docs/GOAL-write-path.md`](GOAL-write-path.md)** — the write path is
+closed. One entry, one fsync per commit, group commit with a bounded window, and
+numbers. `probe/README.md` pass 7 has the evidence. Awaiting the owner's choice of the
+next stage (three candidates below).
 
 Compressing "agent-native OS" from first principles into an executable base. Second round of rulings is on record: the substrate goes L1+L2 (L3 recorded as technical debt), `counts` is human-written with agent proposals, the probe runs in two steps, the licence is settled.
 
@@ -26,7 +27,17 @@ Nothing hard. Every open item is deliberately deferred, not stuck.
 3. **Done**: storage crash probe (E2). A torn tail made the whole store unreadable; a flipped byte was accepted with the original id; `append()` never fsynced. Contract recorded as D-039.
 4. **Done**: the framed log is in `Ledger` — fsync on append, checksum on recovery, tail cut and counted. `probe/demo.py` still passes 8/8.
 5. **Done**: concurrency (E3). Without CAS, both writers "succeeded" and the world grew two heads with duplicate positions. With CAS under a per-world lock: exactly one winner, the loser gets a conflict and forks (D-040).
-6. **Next**: the cost of correctness — one `fsync` per commit instead of two, then group commit. After that, the Screen.
+6. **Done**: the write path is closed (pass 7). `append` refuses a root; CAS is in the store; one fsync per commit is 2.2x; group commit cuts `fsync/commit` to 0.16 at eight writers. The next ceiling is the commit path on two cores, not the disk.
+
+**Stage complete. Three candidates for the next stage, in the order I would pick them:**
+
+1. **The head index.** The pass-7 ceiling is the per-commit scan (`active()` over every
+   row), not the device. Cache the current root per world; measure against pass 7.
+   Small, and it unblocks every later throughput number.
+2. **The Screen.** The four panels from CORE §6, rendered from projections. It is the
+   first thing a human can use, and the handoff packet for a new brain.
+3. **The adapter boundary.** One real host through one thin adapter, against a 10-line
+   ABI sketch. It is the first test of "any agent lives here" (D-028).
 
 The success test: **if one real event cannot be written in four predicates within one screen, the vocabulary is wrong.**
 
@@ -45,6 +56,9 @@ The success test: **if one real event cannot be written in four predicates withi
 - **Group commit and durability** (D-037/D-039): one fsync covers many claims, so "committed" becomes a batch boundary. How that is reported to a waiting writer is not yet specified.
 - **Where a conflict is recorded** (D-040): `did` cannot be global, and the world it failed to advance is the one it must not write to.
 - **Failed attempts across a crash** (D-040): surviving one costs a second fsync. Worth it, or is "the world did not move" enough?
+- **Cross-process group commit** (D-037/D-040): two processes cannot share an `fsync`
+  boundary without a daemon owning the log. Accept per-commit `fsync` outside one
+  process, or design the daemon?
 
 ## Health
 
@@ -56,3 +70,4 @@ The success test: **if one real event cannot be written in four predicates withi
 - Repository: `/lab`, `main`, public at github.com/YusenZhang0601/tonyos
 - Licence: code GPL-3.0-only / docs CC BY-4.0 / name reserved / contributions require a CLA (D-023)
 - No system yet; the probe is the only executable thing (`python3 probe/demo.py`)
+- Probe: seven passes, four executable experiments (`demo`, `crash`, `concurrent`, `group`)
