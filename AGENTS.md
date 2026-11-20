@@ -41,6 +41,7 @@ Reading only these three should be enough to start work. If it isn't, the writin
 | `probe/` | The probe: a runnable ledger, and what it broke (`probe/README.md`) | How-to |
 | `tools/index.sh` | Generate the index | How-to |
 | `tools/check.sh` | The gate | How-to |
+| `tools/market.sh` | Market sweep: read-only GitHub snapshot, diffable | How-to |
 
 ## How to run
 

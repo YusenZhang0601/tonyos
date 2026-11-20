@@ -10,12 +10,13 @@
 A sweep is four steps and must leave a row in the sweep log. Do not rewrite old rows:
 mark them superseded, the same way a claim is retracted.
 
-1. Run the saved queries (below), sorted by stars, and record the counts.
-2. For every watchlist item, check `pushed_at`, latest release, and description.
+1. Run `tools/market.sh --out <file>` and `diff` it against the previous sweep. Exit 0
+   means complete; any gap is printed as `# ERROR`, and a gap is left open.
+2. For every watchlist item, read the delta in stars, `pushed`, license and archived.
 3. Record **deltas only**. A star count that did not move is not news.
 4. If a trigger fired, update the verdict and say **what refuted the old one**.
 
-Saved queries (copy verbatim):
+Saved queries (copy verbatim, or let the script run them):
 
 ```
 topic:agent-os
@@ -59,11 +60,11 @@ Two things this sweep says we must **not** sell as differentiation:
 | Query | Repos |
 |---|---|
 | `topic:agent-os` | 270 |
-| "AI operating system" agents | 1,452 |
-| "agent-native operating system" | 54 |
-| "agent OS" kernel | 41 |
-| append-only ledger agent memory | 20 |
-| **"agent is the owner"** | **1** (this project) |
+| `"agent-native operating system"` | 28 |
+| `"AI operating system" agents` | 659 |
+| `"agent OS" kernel` | 64 |
+| `append-only ledger agent memory` | 33 |
+| **`"agent is the owner"`** | **1** (this project) |
 
 Star counts are noisy: the field is full of one-person, vision-first repositories
 created in 2026. Attention is high; retention is not demonstrated.
@@ -169,3 +170,4 @@ Not rulings. They need the owner.
 | Date | What changed | Verdict impact |
 |---|---|---|
 | 2026-11-20 | First sweep. 270 `agent-os` repos; Decima, AgentKernel, MXC found as nearest neighbours; exact phrase "agent is the owner" returns only this repo. | Baseline established. |
+| 2026-11-20 | Sweep automated: `tools/market.sh` (8 queries + 13 repos, exit 0). Baseline counts re-taken from one clean run; quoted-phrase count corrected from 54 to 28. | Protocol is executable; numbers now single-source. |
