@@ -2,26 +2,28 @@
 
 > **The single source of design authority.** If an implementation disagrees with this document, this document wins.
 > To change it, first record a ruling in `docs/DECISIONS.md`.
-> Version: v0.7 · 2026-11-20
+> Version: v0.8 · 2026-11-20
 
 ### Terminology
 
-| Term | Meaning | Standard name, where one exists |
-|---|---|---|
-| **assertion** | the only record type in the system | assertion (truth maintenance systems); datom (Datomic) |
-| **justification** | the `because` field: what this assertion rests on | justification (TMS); provenance |
-| **retraction** | the `replaces` field: withdrawal without deletion | retraction (TMS) |
-| **no-go zone** | a ring the human draws around something; acting inside it requires approval | default-allow denylist + policy enforcement point (PEP) |
-| **red line** | an irreversible action; in this design, exactly `send` | non-compensatable action (saga); irreversible effect |
-| **audit trail** | the `did` chain — what actually happened | audit trail; event log |
-| **self-report** | what the system says about itself | self-description; introspection |
-| **the map** | the self-report's default view; the only thing loaded automatically | catalog; manifest |
-| **the Screen** | the human-facing surface: it shows *the agent*, not the machine | — (deliberately not "dashboard") |
-| **reference implementation** | a first-party implementation; always replaceable | reference implementation |
-| **invariant** | a property that cannot be replaced | invariant |
-| **seam** | a boundary across which replacement happens | seam (Feathers) |
-| **need-to-know** | an observer sees only what its task requires | need-to-know; compartmentalisation |
-| **policy compiler** | turns the full rule set into the fragment one task may see | policy compiler (policy-as-code) |
+**Rule**: a term earns its place by fitting. If no existing term fits, we coin one — and then we owe the reader three things: our definition, the nearest existing concept, and **where ours differs**.
+
+| Term | Our definition | Nearest existing | Where ours differs |
+|---|---|---|---|
+| **claim** | a statement by a named party (human / agent / sensor); it enters the world only with a justification chain; withdrawal is a retraction, never a deletion | assertion (truth maintenance systems); datom (Datomic); statement (RDF) | TMS maintains *truth* for the system; a claim is *authored* — the author is part of the record — and truth is never maintained, only filtered by projections. Claims are immutable: superseded, never revised |
+| **justification** | the `because` field: the claims this one rests on | justification (TMS); provenance | Ours must bottom out at exactly two roots — a human signature or a hardware measurement. TMS requires no such thing |
+| **retraction** | the `replaces` field: withdrawal without deletion | retraction (TMS) | Same idea; the original claim is never removed, so the history of opinion survives |
+| **counts-as** | stipulating that X counts as Y; only the human may write it; exactly three forms — identity / satisfaction / representation | counts-as (Searle); constitutive rule | Searle describes social reality; this is an OS primitive with a closed form set and a hard authorship restriction. The restriction is the point: an agent must never define what counts as its own success |
+| **no-go zone** | a ring the human draws around something; acting inside requires approval; outside is allowed by default | default-allow denylist + decision / enforcement points (XACML); "protected resource" | Standard access control governs *subjects and permissions*; this governs *regions of the world and approvals*. Default-allow is normally advised against — we accept it because reversibility and the audit trail are the backstop, not permissions |
+| **red line** | any `did` whose verb is `send`; the only irreversibility the system recognises | non-compensatable action (saga); irreversible effect | A saga asks "can this be compensated inside the transaction?"; ours asks "did this leave our ownership?" The system can undo only what it owns, so the boundary of ownership *is* the boundary of undo |
+| **audit trail** | the `did` chain | audit trail; event log | Ours also records what the agent was **permitted to see** at that moment, not only what it did. Accountability needs the field of view, not just the action |
+| **the map** | the system's self-portrait: loaded automatically, regenerated on every read, must fit one screen, lists categories and entry points only | catalog; manifest; service registry | Not a cache and not an inventory: a stale map is forbidden, and the map's size is the system's complexity ceiling |
+| **the Screen** | the human-facing surface; shows the agent, not the machine | dashboard; HUD | Deliberately not a dashboard. A dashboard reports on the system; the Screen reports on *it* |
+| **reference implementation** | a first-party implementation that is always replaceable | reference implementation | Same term, same meaning |
+| **seam** | a boundary across which a part may be replaced | seam (Feathers) | Ours is also a versioned contract, not merely a substitution point in code |
+| **need-to-know** | an observer sees only what its task requires | need-to-know; compartmentalisation | Enforced structurally by namespace projection, not by evaluating a policy at request time |
+| **policy compiler** | turns the full rule set into the fragment one task may see; the fragment becomes part of the authorization | policy compiler (policy-as-code) | Ours compiles *per task* and every compilation is itself recorded, so "what it was allowed to know" is auditable |
+| **technical debt** | work deferred by choice, to be paid later | technical debt | Same term, same meaning |
 
 ---
 
@@ -59,15 +61,15 @@ This is not "an AI that helps you work" — it is "**you stop working**". The hu
 There is exactly one record type in the system:
 
 ```
-assertion
+claim
   id        content hash (the name is the content)
-  subject   about whom (world / agent:xx / file:/etc/x / assertion:xx)
+  subject   about whom (world / agent:xx / file:/etc/x / claim:xx)
   predicate one of four (closed)
   value     the value (large things store only a hash)
   by        who asserts it (human / agent / sensor)
   at        a total sequence number + wall clock
-  because   [assertion id...]   evidence is itself assertions; recursion bottoms out
-  replaces  [assertion id...]   retraction, not deletion
+  because   [claim id...]   evidence is itself claims; recursion bottoms out
+  replaces  [claim id...]   retraction, not deletion
 ```
 
 | Predicate | Answers | How it fails |
@@ -133,20 +135,20 @@ These two are built-in root definitions and cannot be produced by an agent. With
 
 | Concept | How it is derived |
 |---|---|
-| state | the newest non-replaced assertions about a subject |
+| state | the newest non-replaced claims about a subject |
 | audit trail | the chain of `did` |
 | no-go zones | the `deny` / `require` set of `may` (default `allow`) |
 | red line | any `did` whose verb is `send` |
-| need-to-know | an observer can only read assertions whose subject is in its own namespace |
-| hallucination | an assertion with no `because` chain is excluded at projection time |
+| need-to-know | an observer can only read claims whose subject is in its own namespace |
+| hallucination | a claim with no `because` chain is excluded at projection time |
 | undo | append a `replaces`; history does not move |
-| forgetting | assertions unreachable from the current projection are reclaimed automatically |
+| forgetting | claims unreachable from the current projection are reclaimed automatically |
 | identity / continuity | `counts` (identity) |
 | approval | `counts` (representation) |
 | success / done | `counts` (satisfaction) plus evidence — **computed, not announced by the agent** |
 | plan / intent | `is` (the agent's goal) / `did` (declaring is also a fact) |
 | dependency / ownership / alias / location | computed by projections, never stored |
-| "current" | a `counts` assertion naming which reference counts as current |
+| "current" | a `counts` claim naming which reference counts as current |
 
 **The cost**: many things cannot be said. What cannot be said has to live outside the core, as a separate implementation — which is exactly the point of the layering.
 
@@ -241,7 +243,7 @@ Memory does not participate in reversibility; continuity lives in the ledger, no
 
 1. **Every action happens inside a fork; the reference advances only on commit.** Otherwise "crashed halfway through" cannot be expressed (an unadvanced reference means it never happened).
 2. **If the ledger cannot be written, everything stops.** Otherwise the system acts without recording.
-3. **Changing the vocabulary is a `counts` assertion: "counts as the same system".** The same move handles brain swaps, generations and vocabulary changes.
+3. **Changing the vocabulary is a `counts` claim: "counts as the same system".** The same move handles brain swaps, generations and vocabulary changes.
 
 ---
 
@@ -300,7 +302,7 @@ Four panels, none optional:
 It is not a monitoring dashboard: it shows *the agent*, not the machine's medical chart.
 It is also the **handoff packet**: a new brain's initial context is these four panels, not the whole ledger.
 
-**Who vouches for the self-report?** Assertions without a `because` chain cannot enter the projection; `counts` stipulates what counts as evidence.
+**Who vouches for the self-report?** Claims without a `because` chain cannot enter the projection; `counts` stipulates what counts as evidence.
 
 ---
 
@@ -318,13 +320,13 @@ A distribution = a set of reference implementations + a set of seams + a few inv
 
 **Rules need no approval, only visibility; conflicts are not resolved automatically, only surfaced automatically.** (An immutable ledger already makes silent edits impossible; when two active rules contradict each other, mark the conflict "undecided" and surface it on the Screen.)
 
-**Who writes `counts`**: the human writes; the agent may propose. Drafting and taking effect are separate — the agent may submit a `counts` assertion marked as a proposal, which has no effect until a human signs it. The proposal is itself an assertion and remains auditable.
+**Who writes `counts`**: the human writes; the agent may propose. Drafting and taking effect are separate — the agent may submit a `counts` claim marked as a proposal, which has no effect until a human signs it. The proposal is itself a claim and remains auditable.
 
 ---
 
 ## 8. Engineering discipline
 
-1. **No new layers.** Functionality may only be added as an observer, an assertion, or a projection. A mess is not too much code; it is unclear boundaries.
+1. **No new layers.** Functionality may only be added as an observer, a claim, or a projection. A mess is not too much code; it is unclear boundaries.
 2. **Exactly one hot path**: action → audit trail → projection. A second path means a second truth.
 3. **Measure from week one**: end-to-end action latency. "Extreme performance" that is not measured is folklore. A 2-core machine is the whetstone.
 
@@ -365,7 +367,7 @@ No filesystem semantics of our own, no systemd, no reading `/proc` as a source o
 
 ### 9.4 No block-level snapshots
 
-Because immutability lives in **our own storage**, not in the filesystem. Installed packages, `/etc`, service configuration are all assertions pointing at blobs, regenerable at any time. Outside the ledger, only two things genuinely exist: `vmlinuz` and our own code. They are tiny; A/B slots suffice.
+Because immutability lives in **our own storage**, not in the filesystem. Installed packages, `/etc`, service configuration are all claims pointing at blobs, regenerable at any time. Outside the ledger, only two things genuinely exist: `vmlinuz` and our own code. They are tiny; A/B slots suffice.
 
 > What we need is not a snapshot, but **a log that never overwrites**.
 

@@ -74,7 +74,7 @@ Exit code 0 means the structure is intact. If it is red, fix the structure befor
 ## Hard rules (to break one, first write a DECISION)
 
 1. **Closed vocabulary**: any new requirement must translate into one of `is` / `did` / `may` / `counts`. If it cannot, it belongs in a reference implementation, not in the core.
-2. **No new layers**: functionality may only be added as an observer, an assertion, or a projection.
+2. **No new layers**: functionality may only be added as an observer, a claim, or a projection.
 3. **Design before code**: anything not settled in FOUNDATION must not be quietly settled in code.
 4. **Never delete old text**: mark it superseded and leave a back-pointer.
 5. **Every judgement must state what would refute it.** If you cannot, it is a slogan — rejected.

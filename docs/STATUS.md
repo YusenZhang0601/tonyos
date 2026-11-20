@@ -4,7 +4,7 @@
 
 ## Phase
 
-Design (the base is at v0.7; no code yet)
+Design (the base is at v0.8; no code yet)
 
 ## Working on
 
@@ -32,8 +32,8 @@ The success test: **if one real event cannot be written in four predicates withi
 
 ## Health
 
-- Design authority: `design/FOUNDATION.md` v0.7
-- Decision log: `docs/DECISIONS.md` D-001 … D-024 (3 supersession chains)
+- Design authority: `design/FOUNDATION.md` v0.8
+- Decision log: `docs/DECISIONS.md` D-001 … D-025 (3 supersession chains)
 - Gate: `tools/check.sh` (structure)
 - Repository: `/lab`, `main`, public at github.com/YusenZhang0601/tonyos
 - Licence: code GPL-3.0-only / docs CC BY-4.0 / name reserved / contributions require a CLA (D-023)

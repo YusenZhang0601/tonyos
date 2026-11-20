@@ -134,14 +134,14 @@ Overturned entries are **never deleted**: they are marked "superseded by D-0xx",
 ## D-019 `counts` is human-written; the agent may propose
 
 - **Context**: human-only is too heavy (every criterion needs a human); agent-writable means it always succeeds.
-- **Ruling**: drafting and effect are separate. The agent may submit a `counts` assertion marked as a proposal, which has no effect; a human signature makes it effective.
-- **Consequences**: the human reviews rather than writes from scratch; the proposal is itself an assertion and stays auditable.
+- **Ruling**: drafting and effect are separate. The agent may submit a `counts` claim marked as a proposal, which has no effect; a human signature makes it effective.
+- **Consequences**: the human reviews rather than writes from scratch; the proposal is itself a claim and stays auditable.
 - **Relations**: refines D-006 / D-007.
 
 ## D-020 Probe: install a package, then send an email, both in a fake world
 
 - **Context**: a minimal closed loop is needed, without dirtying the machine (a real install changes apt state).
-- **Ruling**: two steps. First "install a package", running read → write → reference advance → rollback. Then "send an email", hitting the `send` red line and the signature flow. Both in a fake world under `/lab/probe/world/`: real assertions, no real actions.
+- **Ruling**: two steps. First "install a package", running read → write → reference advance → rollback. Then "send an email", hitting the `send` red line and the signature flow. Both in a fake world under `/lab/probe/world/`: real claims, no real actions.
 - **Consequences**: the first runnable artefact is a ledger plus two projections ("what it is doing" / "what it needs from you").
 - **Relations**: no predecessor.
 
@@ -170,7 +170,14 @@ Overturned entries are **never deleted**: they are marked "superseded by D-0xx",
 
 - **Context**: several coined terms had exact equivalents in the literature (truth maintenance systems, saga/compensation, CQRS, XACML, policy-as-code), forcing every reader to translate mentally.
 - **Ruling**: use the standard term for the *mechanism*; keep the image for the *concept* where no standard term exists.
-  - code: `assertion` / `justification` / `retraction`; `audit trail`; `reference implementation`; `technical debt`; `need-to-know`; `policy compiler`; `non-compensatable action`; `policy enforcement point`.
+  - adopted: `audit trail`; `reference implementation`; `technical debt`; `need-to-know`; `policy compiler`; `non-compensatable action`; `policy enforcement point`.
   - kept: `counts-as`, `no-go zone`, `the map`, `the Screen`, `seam`.
-- **Consequences**: the public vocabulary changes at v0.7. The Chinese originals remain in git history (commit `f8d5d38`), so nothing is lost.
-- **Relations**: refines D-006.
+- **Consequences**: the public vocabulary changed at v0.7. The Chinese originals remain in git history (commit `f8d5d38`).
+- **Relations**: **superseded by D-025** — the adopted renames survive, `claim` does not.
+
+## D-025 Coin a term when it fits better, and document the delta
+
+- **Context**: "prefer the standard term" is a good default but a bad absolute. Standard terms carry assumptions. `assertion` (TMS) denotes a node whose truth the system maintains; ours are authored, contestable, and immutable. Forcing our concept into that word imports a model we do not have.
+- **Ruling**: a term earns its place by fitting. If no existing term fits, coin one — and then you owe the reader three things: **our definition, the nearest existing concept, and where ours differs.** The register is the terminology table at the top of `FOUNDATION.md`, and every coined term must be entered there. `claim` is restored.
+- **Consequences**: the vocabulary may be idiosyncratic, but never unexplained. Adds a gate check: every row of the terminology table must carry all four columns, so a term cannot be introduced without its delta.
+- **Relations**: **supersedes D-024**.

@@ -55,5 +55,18 @@ if [ -f docs/INDEX.tsv ]; then
   fi
 fi
 
+# 6. every coined term must carry its delta (four columns in the terminology table)
+if [ -f design/FOUNDATION.md ]; then
+  bad=$(awk -F'|' '
+    /^\| Term \| Our definition \|/ {t=1; next}
+    t && /^\|/ { if (NF != 6) print NR": "NF-2" cells: "$2 }
+    t && !/^\|/ {t=0}
+  ' design/FOUNDATION.md)
+  if [ -n "$bad" ]; then
+    fail "terminology table rows missing columns (need: term / definition / nearest / delta):"
+    printf '%s\n' "$bad" | sed 's/^/      /'
+  fi
+fi
+
 printf -- '---\n%d error / %d warn\n' "$err" "$warn"
 [ "$err" -eq 0 ]
