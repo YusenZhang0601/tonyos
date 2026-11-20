@@ -47,6 +47,7 @@ Enforcement lives in the hand — the executor — never in the agent's good int
 Only a new version plus a pointer swap. So there are no locks, no torn writes, no backups, no restores, no merge conflicts.
 Two primitives: **fork** (free) and **prune** (automatic, by reachability).
 Everything lands in a **world**; only rules and definitions may be global. There is no global "now", only an observer's projection of one total order.
+A claim's name is its content, never its position — so two nodes can agree without coordinating.
 "Back to yesterday" is not a restore, it is an as-of query.
 
 **One reference per world, never one for the machine.** Worlds share no state, so they share no pointer. A single global reference is a cache-line hotspot — the lesson RCU taught Linux.

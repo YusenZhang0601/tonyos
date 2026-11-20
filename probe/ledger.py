@@ -33,6 +33,7 @@ class Ledger:
         self.path = path
         os.makedirs(os.path.dirname(path), exist_ok=True)
         self.rows = []
+        self.duplicates = 0
         if os.path.exists(path):
             with open(path) as f:
                 self.rows = [json.loads(line) for line in f if line.strip()]
@@ -51,18 +52,24 @@ class Ledger:
             assert value["form"] in FORMS, f"unknown form {value['form']}"
         if predicate in HUMAN_ONLY and not by.startswith("human:"):
             assert value.get("proposal") is True, f"{predicate} is human-written; agent may only propose"
-        body = {
-            "seq": len(self.rows) + 1,
+        # Identity is content only (D-038). Position is a property of the container,
+        # never of the name: two nodes asserting the same thing must agree on the id.
+        content = {
             "subject": subject,
             "predicate": predicate,
             "value": value,
             "world": world,
             "by": by,
-            "ts": round(time.time(), 3),
             "because": list(because),
             "replaces": list(replaces),
         }
-        body["id"] = digest(body)
+        cid = digest(content)
+        if any(row["id"] == cid for row in self.rows):
+            # Re-asserting the same thing is not a new event. Whether that is right
+            # for repeated identical `did`s is an open question, not a settled one.
+            self.duplicates += 1
+            return cid
+        body = dict(content, id=cid, seq=len(self.rows) + 1, ts=round(time.time(), 3))
         self.rows.append(body)
         with open(self.path, "a") as f:
             f.write(json.dumps(body, sort_keys=True, ensure_ascii=False) + "\n")

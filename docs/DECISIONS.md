@@ -272,5 +272,17 @@ Overturned entries are **never deleted**: they are marked "superseded by D-0xx",
   - Per-commit `fsync` bounds throughput at the device; this ordering therefore **predicts group commit** — spend latency, buy throughput. That is the ordering working as intended, not a regression.
   - On one block device, software must not serialise what the device would allow. The target is **no self-inflicted serialisation**, not "unlimited concurrency": two cores cannot demonstrate 64-core scaling, only the absence of a lock convoy.
   - Footprint is third, not free. Each tier still needs a floor or ceiling, or "third" silently becomes "unbounded" on a 3.7 GB machine.
+- **Measured** (probe E1, 2026-11-20): the first consequence above was **wrong at the I/O layer**. Sharding the log raised throughput from 102/s to 113/s at eight writers — noise. The device, not the shared file, was the ceiling. Group commit confirmed the prediction: 3,586/s, 35x, and it did not even spend latency at this load. The suspicion moves to CPU-side contention, which this experiment could not see.
 - **Falsifier**: if on this machine `fsync` is not the throughput ceiling, group commit buys nothing and the predicted consequence is wrong. Measure before building it.
 - **Relations**: refines D-036; makes the global-order question (FOUNDATION §4.3, probe question 6) urgent rather than open-ended.
+
+## D-038 Identity is content, not position; no new global singleton without a replacement path
+
+- **Context**: the owner intends TonyOS to run on clusters, with hundreds of thousands of agents. Held against that ambition, the scalable parts are real — no shared mutable state, immutable claims, per-world references, no global "now" — but the implementation had accidental singletons. The sharpest: `id = hash(... seq, ts ...)` made a claim's name depend on its position, so the same assertion on two nodes produced two ids. Content-addressing in name only, and unmergeable.
+- **Ruling**: three things.
+  1. **A claim's identity is its content** — subject, predicate, value, world, by, because, replaces. Position (`seq`) and observation time (`ts`) belong to the container, never to the name.
+  2. **No new global singleton enters the core without a recorded replacement path for a multi-node deployment.** A singleton that cannot name its replacement is a defect, not a deferred detail.
+  3. **`signature` ≠ `capability`.** A human signature authorises one act (D-034). Delegation is a pre-signed batch of one-shot grants, so it scales to many agents without a quota counter and without amending D-034.
+- **Consequences**: identical claims collapse — re-asserting the same thing is not a new event. That is a consequence, **not yet a ruling**: repeated identical `did`s may need a per-author counter, because "it looked twice" is arguably part of the audit trail. Cross-node merge becomes possible in principle; the claim store is now a set as much as a log, and order is supplied by the container.
+- **Falsifier**: if two nodes can produce identical content with different meaning, content-only identity is wrong. Repeated identical `did`s are the first candidate.
+- **Relations**: refines D-030, D-031 and D-032; constrains D-028 and every future scale decision.

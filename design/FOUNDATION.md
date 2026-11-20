@@ -3,7 +3,7 @@
 > **The single source of design authority.** If an implementation disagrees with this document, this document wins.
 > **Start with [`CORE.md`](CORE.md)** — one page. This file is the manual behind it: read it when you need the *why*.
 > To change it, first record a ruling in `docs/DECISIONS.md`.
-> Version: v0.14 · 2026-11-20
+> Version: v0.15 · 2026-11-20
 
 ### Terminology
 
@@ -63,12 +63,13 @@ There is exactly one record type in the system:
 
 ```
 claim
-  id        content hash (the name is the content)
+  id        content hash: identity is content only, never position (D-038)
   subject   about whom (world / agent:xx / file:/etc/x / claim:xx)
   predicate one of four (closed)
   value     the value (large things store only a hash)
+  world     which world it lands in; only rules and definitions may be `*`
   by        who asserts it (human / agent / sensor)
-  at        a total sequence number + wall clock
+  at        position in its container (sequence) + observation time (untrusted)
   because   [claim id...]   evidence is itself claims; recursion bottoms out
   replaces  [claim id...]   retraction, not deletion
 ```
@@ -425,6 +426,8 @@ Each adapter session issues a capability token. The `by` field stops being a sel
 **The performance order (D-037)**: concurrency and throughput first, latency second, resource footprint third. Boot time is latency. "All-round good" is not a budget; the ranking is what decides a tradeoff. Spending footprint needs no argument, spending latency needs a number, spending throughput needs an explicit exception — the mirror of D-036's three tiers.
 
 Corollary: a global serialisation point on the write path is a design defect until measured otherwise. Concurrency is not "unlimited"; on two cores the honest target is **no self-inflicted serialisation**, which is measurable, not scalable-to-64-cores, which is not.
+
+**Measured, not assumed** (`probe/throughput.py`): on this machine's HDD, sharding the log did not raise throughput (102/s shared vs 113/s sharded at eight writers); fsync was the ceiling, and group commit was 35x faster without spending latency at that load. The suspicion therefore moves from the shared log to CPU-side contention, which this probe could not see.
 
 **The five gates of "exemplary" (for reference implementations)**: readable on one screen / zero external dependencies / explicit memory and latency bounds / replaceable without hurting others / no configuration files.
 

@@ -1,6 +1,6 @@
 # The probe
 
-Three passes. **Its job is to be wrong**, so the design stops being self-validating.
+Four passes. **Its job is to be wrong**, so the design stops being self-validating.
 
 ```bash
 python3 probe/demo.py
@@ -72,16 +72,77 @@ First implementation walked the fork chain from the viewpoint's own `because`. T
 
 This is the most useful bug of the three, because it fails *quietly*: the screen still rendered, the numbers still looked plausible.
 
+## Pass 4 — identity and the throughput ceiling
+
+Two experiments, both runnable: `python3 probe/throughput.py`.
+
+**Identity (D-038).** The id used to be hashed over `seq` and `ts`, so the same
+claim on two nodes got two names. Now it covers content only:
+
+```
+node A id          : bff767701169e01e
+node B id          : bff767701169e01e
+same across nodes  : True
+re-assert collapses: True (duplicates=1)
+```
+
+Collapsing is a consequence, not yet a ruling: two identical `did`s become one event.
+
+**Throughput (D-037).** Four layouts, 1 / 2 / 4 / 8 writers, fsync per commit
+unless stated. This machine's disk is a **spinning HDD** (WD10EZEX, ROTA=1), so
+the absolute numbers are HDD numbers; the shape is the point.
+
+```
+layout         writers    ops/sec   mean ms   p99 ms
+shared+fsync         1         38     26.20    68.42
+shared+fsync         8        102     82.77   160.37
+shard+fsync          1         32     32.00    75.14
+shard+fsync          8        113     71.09   158.41
+group                1       1398      0.71     3.09
+group                8       3586      2.23     9.02
+nofsync              1      22980      0.04     0.15
+nofsync              8      22498      0.35    11.27
+```
+
+### What pass 4 taught
+
+**A · Sharding the log bought nothing.** 102/s shared vs 113/s sharded at eight
+writers — noise. The shared file was not the ceiling; **the device was**. The
+global `seq` suspicion (D-037's first consequence) is not supported at the I/O
+layer. This is a hypothesis the measurement killed, not one it confirmed.
+
+**B · fsync is the ceiling, by 35x.** 3,586/s with group commit against 102/s
+per-commit. D-037's prediction that throughput-first implies group commit held.
+
+**C · The predicted tradeoff did not appear.** Group commit was supposed to spend
+latency. At this load it improved both mean and tail: 0.68 ms / 3.0 ms at one
+writer, 2.25 / 8.5 at eight, against 26–160 ms per-commit. The tradeoff exists in
+principle — waiting for a 5 ms window — but the measured regime never entered it.
+
+**D · The software ceiling is not visible here.** `nofsync` flattens at ~23k/s:
+that is Python and the GIL, not the device. This experiment cannot say how a Rust
+core would scale.
+
+### What pass 4 does not test
+
+The raw append path only. It bypassed `Ledger`: no CAS, no visibility scan, no
+world semantics. **Two agents committing to one world is still untested.**
+
+fsync is not a power cut; the file is on ext4, not a raw device.
+
 ## Still untested
 
-**Concurrency.** Two agents committing to one world at the same time. The probe assumes serial execution; `did.at` is designed as a compare-and-swap precondition but nothing enforces it yet.
+**Concurrency semantics.** Two agents committing to one world. `did.at` is
+designed as a compare-and-swap precondition but nothing enforces it.
 
 **The Screen.** Four projections exist as functions; nothing renders them.
 
-**Everything below the ledger.** It is a Python list of dicts, not a block device, not content-addressed storage, not a booted system.
+**Everything below the ledger.** A Python list of dicts is not a block device, not
+content-addressed storage, not a booted system.
 
 ## Rulings owed
 
 1. Does `tick` deserve its own verb, or is a root claim with an unchanged tree enough?
 2. Should `*` (global) be limited to `may`/`counts`, or do sensor facts also belong above worlds?
 3. The trust root: only the assumption claim exists (D-033).
+4. Repeated identical `did`s collapse into one event (D-038). Is "it looked twice" information the ledger must keep?
