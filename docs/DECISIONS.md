@@ -299,3 +299,15 @@ Overturned entries are **never deleted**: they are marked "superseded by D-0xx",
 - **Consequences**: +10 bytes per record (5.7% on ~175-byte claims). A corrupt frame costs the tail after it unless a scrub resyncs; accepted, because silent loss is worse. The probe's failure was a **reader policy**, not the JSONL format: a lenient reader recovered the same prefix. The checksum is the part JSONL could not supply.
 - **Falsifier**: a torn sector whose CRC still matches, or a filesystem that persists a later frame but not an earlier one. Either breaks "prefix" as a guarantee; neither has been tested.
 - **Relations**: implements D-032, D-038 and §4.7 rule 2; depends on D-033 for adversarial integrity.
+
+## D-040 The store enforces compare-and-swap; a conflict is visible and the loser forks
+
+- **Context**: E3. With no CAS, two processes committing to one world produced **none** of the three predicted outcomes. Both returned a root; the world ended with two heads sharing one parent; and because each computed its position from a stale snapshot, two records got the same sequence number. Nothing failed, and the screen would silently show two heads.
+- **Ruling**:
+  1. **Read the head, assign the position, append the commit, advance the head — one critical section per world.** Compare-and-swap is a store operation, not caller discipline.
+  2. **A conflict is an explicit result.** Never a silent overwrite, never a silent second head.
+  3. **The loser's default exit is a fork** from the head it read. Retry is a policy a caller may add; it is not the primitive.
+  4. **Readers never truncate.** Recovery that cuts a tail requires exclusive access; otherwise a reader can destroy a frame a writer is still producing.
+- **Consequences**: the per-world critical section bounds throughput: 65 ms per commit on this HDD (two `fsync`s) = 15.5/s. **One `fsync` covering both frames is sufficient for the world**, because an orphan `did` without a root means "did not happen" (§4.7); whether a failed attempt must survive a crash is a policy question. Group commit is still unimplemented. The position counter belongs to the world's critical section, so at cluster scale it is per-world: a global sequence would restore the shared hot path D-036 removed.
+- **Falsifier**: a filesystem that persists a later frame but not an earlier one *within one `fsync`* would break both prefix recovery and this ordering. Not tested.
+- **Relations**: implements §4.3's per-world CAS; refines D-031, D-032 and D-035; depends on D-039.

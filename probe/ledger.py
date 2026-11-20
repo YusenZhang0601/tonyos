@@ -31,8 +31,9 @@ class NotFound(Exception):
 
 
 class Ledger:
-    def __init__(self, path):
+    def __init__(self, path, writable=True):
         self.path = path
+        self.writable = writable
         os.makedirs(os.path.dirname(path), exist_ok=True)
         self.rows = []
         self.duplicates = 0
@@ -44,12 +45,16 @@ class Ledger:
             if valid < len(raw):
                 # The tail never made it, or the first bad frame starts here. Cut it
                 # and keep the fact (D-039): a lost tail must be visible, not silent.
+                # Only a writer may cut: a reader that truncates can destroy a frame
+                # another process is still writing.
                 self.truncated = len(raw) - valid
-                with open(path, "r+b") as f:
-                    f.truncate(valid)
+                if writable:
+                    with open(path, "r+b") as f:
+                        f.truncate(valid)
 
     # ---------------------------------------------------------------- writing
     def append(self, subject, predicate, value, world, by, because=(), replaces=()):
+        assert self.writable, "this ledger was opened read-only"
         assert predicate in PREDICATES, f"unknown predicate {predicate}"
         assert world and (world == "*" or isinstance(world, str)), "world is required (D-030)"
         if predicate not in GLOBAL_OK:

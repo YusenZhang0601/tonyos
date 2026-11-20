@@ -1,6 +1,6 @@
 # The probe
 
-Five passes. **Its job is to be wrong**, so the design stops being self-validating.
+Six passes. **Its job is to be wrong**, so the design stops being self-validating.
 
 ```bash
 python3 probe/demo.py
@@ -208,10 +208,69 @@ Still untested: a real power cut (this is a file, not a block device), and
 mid-file corruption followed by valid data (resync is a scrub policy, not
 decided).
 
-## Still untested
+## Pass 6 — two agents, one world
 
-**Concurrency semantics.** Two agents committing to one world. `did.at` is
-designed as a compare-and-swap precondition but nothing enforces it.
+Real processes, one file. Both read the head, then wait, so the race is reachable
+on two cores. `python3 probe/concurrent.py`
+
+```
+A · no compare-and-swap
+  both processes returned a root : True
+  roots in world:lab             : 3 (1 seed + 2 commits)
+  commits sharing one parent     : 1 parent(s) for 2 commits
+  duplicate sequence numbers     : True
+  what the screen would show     : 2 heads, silently
+
+B · compare-and-swap, 5 rounds
+  exactly one winner per round   : True
+  loser forked instead of dying  : True
+  fork sees the parent's claims  : True
+  fork does not see the winner   : True
+
+C · cost, one world, sequential
+  5 commits in 0.32s             : 15.5 commits/s (65 ms each, 2 fsyncs)
+```
+
+### What pass 6 taught
+
+**A · None of the three predicted outcomes happened.** I expected one failure,
+one overwrite, or two forks. Instead **both returned a root and the world grew two
+heads sharing one parent**, with two records at the same position. Nothing failed.
+Immutable data cannot be overwritten, and the "fork" was never *declared* — both
+roots claimed the same world. A silent split is worse than a visible conflict.
+
+**B · The position counter is part of the race.** Each process computed
+`seq = len(rows) + 1` from its own stale snapshot, so two claims got the same
+position. Reading the head, assigning the position and advancing the head must be
+**one critical section**; they are not three steps.
+
+**C · One winner, and the loser is told.** Under a lock plus a re-check of the
+head, exactly one commits per round in 5/5 rounds. The loser gets a `Conflict`,
+not a second head.
+
+**D · The loser's exit is a fork, not a retry.** Forking from the head it read
+kept both intents: the fork sees the parent's claims and never the winner's. This
+is the first evidence for "a fork is concurrency's escape", not just an
+experiment tool.
+
+**E · Correctness costs 65 ms per commit** — two `fsync`s, one for the `did` and
+one for the root — about 15.5 commits/s per world on this HDD. One `fsync`
+covering both frames is enough for the world: an orphan `did` without a root means
+"did not happen" (§4.7). Whether a failed attempt must survive a crash is a
+policy question, and it costs the second `fsync`.
+
+**F · A reader must not truncate.** Adopting D-039 made every `Ledger()` cut an
+invalid tail. A reader opening during a write would cut a frame the writer is
+still producing. Readers now open read-only; truncation requires exclusive
+access.
+
+### What pass 6 does not test
+
+The race is **forced** (both read, then wait). It proves the schedule is
+reachable, not how often it occurs. Cross-node concurrency, and a crash between
+the `did` and the root, are still untested.
+
+## Still untested
 
 **The Screen.** Four projections exist as functions; nothing renders them.
 
@@ -224,3 +283,6 @@ content-addressed storage, not a booted system.
 2. Should `*` (global) be limited to `may`/`counts`, or do sensor facts also belong above worlds?
 3. The trust root: only the assumption claim exists (D-033).
 4. Repeated identical `did`s collapse into one event (D-038). Is "it looked twice" information the ledger must keep?
+5. Where does a conflict get recorded? `did` cannot be global, and the world it
+   failed to advance is exactly the one it must not write to.
+6. Must a failed attempt survive a crash? It costs a second `fsync` (D-040).

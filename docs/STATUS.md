@@ -21,7 +21,8 @@ Nothing hard. Every open item is deliberately deferred, not stuck.
 2. **Done**: throughput probe (E1). fsync, not the shared log, was the ceiling: 38/s per-commit on this HDD, 3,586/s with group commit; sharding bought nothing. D-037's group-commit prediction held, its "shared log is the suspect" consequence did not.
 3. **Done**: storage crash probe (E2). A torn tail made the whole store unreadable; a flipped byte was accepted with the original id; `append()` never fsynced. Contract recorded as D-039.
 4. **Done**: the framed log is in `Ledger` — fsync on append, checksum on recovery, tail cut and counted. `probe/demo.py` still passes 8/8.
-5. **Next**: concurrency — two agents committing to one world. `did.at` is the designed compare-and-swap and nothing enforces it.
+5. **Done**: concurrency (E3). Without CAS, both writers "succeeded" and the world grew two heads with duplicate positions. With CAS under a per-world lock: exactly one winner, the loser gets a conflict and forks (D-040).
+6. **Next**: the cost of correctness — one `fsync` per commit instead of two, then group commit. After that, the Screen.
 
 The success test: **if one real event cannot be written in four predicates within one screen, the vocabulary is wrong.**
 
@@ -38,11 +39,13 @@ The success test: **if one real event cannot be written in four predicates withi
 - **Repeated identical `did`s** (D-038): they collapse into one event. Is "it looked twice" part of the audit trail, and does that require a per-author counter?
 - **Mid-file corruption** (D-039): recovery stops at the first bad frame. Whether a scrub may resync past it and recover later frames is not decided.
 - **Group commit and durability** (D-037/D-039): one fsync covers many claims, so "committed" becomes a batch boundary. How that is reported to a waiting writer is not yet specified.
+- **Where a conflict is recorded** (D-040): `did` cannot be global, and the world it failed to advance is the one it must not write to.
+- **Failed attempts across a crash** (D-040): surviving one costs a second fsync. Worth it, or is "the world did not move" enough?
 
 ## Health
 
 - Design authority: `design/FOUNDATION.md` v0.15
-- Decision log: `docs/DECISIONS.md` D-001 … D-039 (3 supersession chains)
+- Decision log: `docs/DECISIONS.md` D-001 … D-040 (3 supersession chains)
 - Implementation: Rust core, Python probe; ABI carries no language types (D-027)
 - Agents: external, one ABI + N thin adapters, MCP is an adapter only (D-028)
 - Gate: `tools/check.sh` (structure)
