@@ -108,7 +108,7 @@ def cost(path, n=5):
         led.commit(W1, {f"/c{i}": "x"}, "agent:c", expect=led.current_root(W1))
     dt = time.perf_counter() - t
     print(f"  {n} commits in {dt:.2f}s          : {n/dt:.1f} commits/s "
-          f"({1000*dt/n:.0f} ms each, 2 fsyncs per commit)")
+          f"({1000*dt/n:.0f} ms each, 1 fsync per commit)")
     print("  group commit is not applied yet (D-037 predicted it; E1 measured 35x)")
 
 
