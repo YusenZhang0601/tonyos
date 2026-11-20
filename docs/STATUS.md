@@ -8,6 +8,10 @@ Design, plus a three-pass probe (base at v0.13; no system yet)
 
 ## Working on
 
+**Current stage: [`docs/GOAL-write-path.md`](GOAL-write-path.md)** — close the write path
+(one entry, one fsync, group commit, numbers). The stage is over when its Definition of
+done is verified.
+
 Compressing "agent-native OS" from first principles into an executable base. Second round of rulings is on record: the substrate goes L1+L2 (L3 recorded as technical debt), `counts` is human-written with agent proposals, the probe runs in two steps, the licence is settled.
 
 ## Blocked
