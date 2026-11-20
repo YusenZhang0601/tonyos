@@ -241,3 +241,17 @@ Overturned entries are **never deleted**: they are marked "superseded by D-0xx",
 - **Ruling**: authorization is grounded in a human signature (possible today, out of band); integrity is grounded in a measured boot (not available on this machine). The absent half is written down as an **assumption claim authored by the human**, never dressed up as evidence.
 - **Consequences**: any chain ending in the assumption carries that label; the Screen can show "root: assumed (unmeasured)"; when measurement arrives, old conclusions keep their label rather than being retroactively upgraded.
 - **Relations**: derived from probe finding 5. **Deferred beyond the assumption claim** — triggers: the first third-party agent (identity first), and any external release (integrity).
+
+## D-034 An approval is spent by using it; expiry is a ledger position
+
+- **Context**: after the first approval, `send` was allowed forever — nothing bounded a signature. The probe showed `needs=[]` even after a rollback.
+- **Ruling**: one signature authorises one act. The `did` that performs the act also retracts the signature it consumed, so the act and the spending are a single claim. An approval may carry `until`, expressed as a **ledger position**, never as a wall time. A target may be named, so a signature for one recipient cannot be spent on another.
+- **Consequences**: no counters, no decrement, no revocation sweep. "Who used this signature and when" is answered by the send itself. Expiry is checkable without trusting a clock.
+- **Relations**: derived from probe finding B; depends on D-019 (a signature is what makes a proposal real).
+
+## D-035 A fork is a commit whose view points into another world; ancestry belongs to the world
+
+- **Context**: the probe needed a second world. The first implementation walked ancestry from each viewpoint's own `because`.
+- **Ruling**: forking needs no new vocabulary — it is a `did` in the new world whose `view` names a viewpoint in the old one, followed by a root claim. Ancestry is derived **once per world**, from the world's first root, not per viewpoint.
+- **Consequences**: the child sees the parent's claims up to the fork point and never after; a rollback in the parent leaves the child untouched; a sibling never sees the other's work. The bug that forced this rule failed *silently* — after any `tick`, the fork's lineage vanished and the child quietly stopped seeing its parent, with no error and a plausible-looking screen.
+- **Relations**: derived from probe pass 3; depends on D-031 (viewpoint) and D-032 (commit).

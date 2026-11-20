@@ -91,22 +91,55 @@ class Ledger:
                         changed = True
         return [row for row in self.rows if live[row["id"]]]
 
+    def _origin(self, root):
+        """The viewpoint a root was forked from, if it came from another world.
+
+        A fork is just a commit whose `did.view` points into a different world, so
+        ancestry is derivable and needs no extra field.
+        """
+        for cid in root["because"]:
+            claim = self.get(cid)
+            if claim["predicate"] == "did" and claim["value"].get("view"):
+                parent = self.get(claim["value"]["view"])
+                if parent["world"] != root["world"]:
+                    return claim["value"]["view"]
+        return None
+
+    def _world_origin(self, world):
+        """Where a world was forked from, if it was. A property of the world, not
+        of a viewpoint: otherwise any later tick would lose the ancestry."""
+        for row in self.rows:
+            if row["world"] != world or row["predicate"] != "is" or "root" not in row["value"]:
+                continue
+            origin = self._origin(row)
+            if origin:
+                return origin
+        return None
+
     def visible(self, viewpoint):
-        """The slice of the ledger visible at a viewpoint.
+        """The slice of the ledger visible at a viewpoint, walking ancestry.
 
         Scope resolution lives here, not in projections (D-031): a projection is
         handed a finished world and cannot read another one by accident.
         """
         root = self.get(viewpoint)
         assert root["predicate"] == "is" and "root" in root["value"], "a viewpoint must be a root claim"
+        windows = []
         world, cutoff = root["world"], root["seq"]
-        out = []
-        for row in self.active():
-            if row["seq"] > cutoff:
-                continue
-            if row["world"] == "*" or row["world"] == world:
-                out.append(row)
-        return out
+        while world and world != "*":
+            windows.append((world, cutoff))
+            origin = self._world_origin(world)
+            if not origin:
+                break
+            parent = self.get(origin)
+            world, cutoff = parent["world"], parent["seq"]
+        live = self.active()
+        return [row for row in live
+                if row["world"] == "*"
+                or any(row["world"] == w and row["seq"] <= cutoff for w, cutoff in windows)]
+
+    def seq_of(self, cid):
+        return self.get(cid)["seq"]
 
     def current_root(self, world):
         roots = [r for r in self.active()

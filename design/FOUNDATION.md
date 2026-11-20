@@ -3,7 +3,7 @@
 > **The single source of design authority.** If an implementation disagrees with this document, this document wins.
 > **Start with [`CORE.md`](CORE.md)** — one page. This file is the manual behind it: read it when you need the *why*.
 > To change it, first record a ruling in `docs/DECISIONS.md`.
-> Version: v0.11 · 2026-11-20
+> Version: v0.12 · 2026-11-20
 
 ### Terminology
 
