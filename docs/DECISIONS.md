@@ -101,7 +101,7 @@ Overturned entries are **never deleted**: they are marked "superseded by D-0xx",
 - **Context**: v0.5 deleted the whole "six seams" section (it looked redundant with the four predicates), which left a gap — "everything is replaceable" had no explicit attachment point.
 - **Ruling**: neither restore nor re-count. Wait until the probe shows which boundaries are actually replaced.
 - **Consequences**: replaceability currently lacks an explicit anchor. This is a known gap, not an oversight.
-- **Relations**: related to D-006; review trigger: once the "install a package" probe produces a ledger.
+- **Relations**: related to D-006. **Closed by D-028**: the seam is the adapter boundary, so no new abstraction needs inventing.
 
 ## D-015 `/lab` joins git: secrets isolated to `.machine/`
 
@@ -192,3 +192,17 @@ Overturned entries are **never deleted**: they are marked "superseded by D-0xx",
   - the map becomes the **catalogue of queryable projections** — "what can be asked" is a cataloguing question, not a grammar question.
   - accepted cost: users cannot extend derivation by writing rules; they extend it by writing projections, which are replaceable units.
 - **Relations**: refines D-006; supplies the missing half of D-012 (the map's contents).
+
+## D-027 Implementation: Rust core, Python probe
+
+- **Context**: the core must satisfy four things at once — memory safety at the enforcement point, ten-year longevity, small static binaries, and stock on a 2-core machine.
+- **Ruling**: the probe is written in **Python** (its purpose is to be contradicted quickly, not to be elegant). The core is written in **Rust** (longevity and memory safety outrank compile speed). **No language's types may appear in the ABI** — fixed-format serialisation only, so the language remains replaceable.
+- **Consequences**: heavy builds may have to move to the workstation, colliding with the existing "no heavy builds on this machine" preference; resolve when the core starts. "Can the language be changed?" becomes the first test of whether the ABI is genuinely implementation-neutral.
+- **Relations**: depends on D-016 (L1+L2); supports D-026 (no language in the vocabulary).
+
+## D-028 Agents are external: one ABI, N thin adapters
+
+- **Context**: building our own agent is unrealistic, and users will want whichever agent they already like. The system must be agnostic to the source of intelligence.
+- **Ruling**: do not build agents. Solve M×N with one ABI plus N thin adapters. **The seam is the adapter boundary** (closing D-014). **MCP is an adapter, not the ABI** — the same discipline that keeps kernel abstractions out of the core. Each adapter session issues a capability token, so `by` becomes an authenticated identity rather than a self-description — this is also the answer to the previously unrecorded gap: **who may append to the ledger**.
+- **Consequences**: adapters must contain no logic, or they become privileged components. Continuity lives in the ledger, so any agent can take over. Multi-vendor support is not a feature but the point: *any agent lives better here*.
+- **Relations**: **closes D-014**; resolves the append-authority gap noted in the 2026-11-20 retrospective; supports D-008 (per-observer projection).

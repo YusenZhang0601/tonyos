@@ -2,7 +2,7 @@
 
 > **The single source of design authority.** If an implementation disagrees with this document, this document wins.
 > To change it, first record a ruling in `docs/DECISIONS.md`.
-> Version: v0.9 · 2026-11-20
+> Version: v0.10 · 2026-11-20
 
 ### Terminology
 
@@ -378,6 +378,39 @@ A distribution = a set of reference implementations + a set of seams + a few inv
 
 ---
 
+## 7.5 Agents are external
+
+**We do not build agents.** This is not a concession; it is the historical pattern: Unix won by running other people's programs, the web by running other people's pages. An agent OS that runs only its own agent is a walled garden.
+
+So the shape is the classic M×N problem, solved the classic way:
+
+```
+N agent hosts (Claude Code, Codex, Cursor, Gemini CLI, your own scripts)
+M capabilities (append a claim, query, execute, request approval)
+
+        -> one ABI + N thin adapters
+```
+
+> **The seam is the adapter boundary.**
+
+This closes D-014: the seam layer is not a new abstraction to invent, it is the place where adapters attach.
+
+### Two rules that must hold now
+
+**1. MCP is an adapter, not the ABI.**
+MCP is the de-facto standard and supports every major host, so an MCP adapter is the cheapest way in. But MCP is still evolving; adopting its model as our ABI would let someone else's abstractions leak into the core — the same discipline as "the kernel gives us processes, memory, devices, nothing else". **Our ABI is ours; MCP is one adapter around it.**
+
+**2. Agent identity is the answer to append authority.**
+Each adapter session issues a capability token. The `by` field stops being a self-description and becomes an authenticated identity. A foreign agent is untrusted by default and is granted rights item by item.
+
+### The consequences
+
+- Adapters must contain **no logic**. Logic in an adapter turns it into a privileged component, which breaks replaceability.
+- Continuity lives in the ledger, not in the agent — so **any** agent can pick up the work, including one that has never seen this machine.
+- Multi-vendor support is not a feature; it is the point. The pitch is not "our agent is better" but **"any agent lives better here"**: memory, history, boundaries, a world that can be rolled back.
+
+---
+
 ## 8. Engineering discipline
 
 1. **No new layers.** Functionality may only be added as an observer, a claim, or a projection. A mess is not too much code; it is unclear boundaries.
@@ -439,6 +472,26 @@ Because immutability lives in **our own storage**, not in the filesystem. Instal
 > Everything `find / -type f` returns should be ours.
 
 This can be checked by a gate; until it holds, record what is still borrowed as a burn-down list rather than relying on memory.
+
+### 9.7 Implementation language and platform
+
+| Layer | Now | Later |
+|---|---|---|
+| Platform | x86_64 (this AIO) | arm64; the ABI stays neutral in byte order and pointer width |
+| Boot | UEFI + UKI, no initrd or a minimal one; A/B slots plus the rescue host | unchanged |
+| Isolation | namespaces + cgroups (L2); **the executor is a userspace process** | L3: the kernel demoted to a driver domain |
+| Core language | **Rust** | — |
+| Probe language | **Python** | — |
+
+The executor is an ordinary userspace process, not a kernel module: it must change often and be replaceable, and anything put into the kernel never comes back out.
+
+**One hard rule, more important than the choice of language:**
+
+> **No language's types may appear in the ABI.**
+
+Serialise with a fixed format (CBOR or a fixed binary layout); never put `#[repr(C)]` structs on the wire. Only then is "changing the language" possible — and whether the language can be changed is the first real test of whether the ABI is implementation-neutral at all.
+
+Rust was chosen for longevity and for memory safety at the enforcement point. Cost accepted: compiling Rust on this 2-core machine is painful, so heavy builds may move to the workstation — which collides with the existing "no heavy builds on this machine" preference and must be resolved when the core starts.
 
 ---
 
