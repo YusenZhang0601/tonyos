@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# 生成全仓文档索引。
-# 用法：tools/index.sh [输出路径]    默认 docs/INDEX.tsv
+# Generate the repository index.
+# Usage: tools/index.sh [output]    default: docs/INDEX.tsv
 #
-# 索引范围（刻意收窄）：
-#   - 根目录与三层内的 *.md / *.txt
-#   - tools/ 下的 *.sh
-# 排除：lost+found/、.git/、以及无扩展名的本机环境脚本与 *.yaml（含凭据，不进索引）。
+# Scope (deliberately narrow):
+#   - *.md / *.txt within the root and three levels down
+#   - *.sh under tools/
+# Excluded: lost+found/, .git/, .machine/ (local environment, contains credentials)
 
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -16,7 +16,7 @@ mkdir -p "$(dirname "$out")"
 {
   printf 'path\tsha12\tlines\tmtime\n'
   {
-    find . -maxdepth 3 \( -path ./lost+found -o -path ./.git \) -prune -o \
+    find . -maxdepth 3 \( -path ./lost+found -o -path ./.git -o -path ./.machine \) -prune -o \
       -type f \( -name '*.md' -o -name '*.txt' \) -print
     find tools -maxdepth 1 -type f -name '*.sh'
   } | sed 's|^\./||' | sort -u | while IFS= read -r f; do

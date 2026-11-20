@@ -1,50 +1,50 @@
 # TonyOS
 
-> 一个 agent-native 的最小操作系统：**系统的主人是智能，不是人；人是宪法，不是操作者。**
+> An agent-native minimal operating system: **the agent is the owner, the human is the constitution.**
 
-不是"装了个 AI 的桌面"。是一个从第一性原理重来的尝试：如果机器上的主体是智能，那么进程、文件、权限、日志、界面，都该被重新定义一遍。
+Not "a desktop with an AI installed". An attempt to start over from first principles: if the subject of a machine is an agent, then processes, files, permissions, logs and the screen should all be redefined from scratch.
 
-## 现在是什么
+## What this is
 
-**设计阶段，还没有代码。**
+**Design stage. There is no code yet.**
 
-已经定下来的东西，比代码重要：
+What is already settled matters more than code:
 
-- **四个谓词**：`is` / `did` / `may` / `counts`。整个系统的词汇量就这么多，其余全是投影。
-- **禁地模型**：不是沙箱白名单，是人划圈、圈内须批准、圈外默认放行。
-- **可逆公理**：世界上没有"修改"，只有"新版本 + 换指针"。撤销和恢复是两个不该存在的词。
-- **默认不加载**：历史是图书馆，不是空气。任何东西都不能自己进入上下文。
+- **Four predicates** — `is` / `did` / `may` / `counts`. That is the entire vocabulary of the system; everything else is a projection.
+- **No-go zones** — not a sandbox allowlist. The human draws a ring; inside it requires approval; outside it is allowed by default.
+- **The axiom of reversibility** — there is no "modify", only "a new version plus a pointer swap". Undo and restore are words that should not exist.
+- **Default: don't load** — history is a library, not the air. Nothing may enter the agent's context on its own.
 
-完整推导在 [`design/FOUNDATION.md`](design/FOUNDATION.md)。每一处取舍、以及被推翻的旧结论，都在 [`docs/DECISIONS.md`](docs/DECISIONS.md)。
+The full derivation is in [`design/FOUNDATION.md`](design/FOUNDATION.md). Every tradeoff — and every conclusion that was later overturned — is on record in [`docs/DECISIONS.md`](docs/DECISIONS.md).
 
-## 为什么公开
+## Why it is public
 
-因为这套东西如果值得存在，它就应该成为别人替换时的**参考基准**。收许可费会挡住这件事。
+If this is worth existing, it should become the **reference** that others are measured against. Charging for it would prevent exactly that.
 
-代码用 GPL-3.0：商用免费，但改了必须公开——没人能拿走它做一个闭源分支把生态分裂走。
-文档用 CC BY-4.0：理念可以拿去用，署个名就行。
-名字保留（见 [`TRADEMARK.md`](TRADEMARK.md)）：代码可以随便拿，名字不行。
+Code is GPL-3.0: free for commercial use, but modifications must be published — nobody can take it into a closed fork and split the ecosystem.
+Documentation is CC BY-4.0: take the ideas, just credit them.
+The name is reserved (see [`TRADEMARK.md`](TRADEMARK.md)): the code is free, the name is not.
 
-详细的分法在 [`LICENSING.md`](LICENSING.md)。
+Details in [`LICENSING.md`](LICENSING.md).
 
-## 怎么读
+## Where to start
 
-如果你只有五分钟：
+If you have five minutes:
 
-1. [`design/FOUNDATION.md`](design/FOUNDATION.md) 的第 1 节（四个谓词）和第 3 节（禁地）
-2. [`docs/STATUS.md`](docs/STATUS.md)（现在到哪了）
+1. [`design/FOUNDATION.md`](design/FOUNDATION.md) — section 1 (the four predicates) and section 3 (no-go zones)
+2. [`docs/STATUS.md`](docs/STATUS.md) — where things stand
 
-如果你想贡献：先看 [`CLA.md`](CLA.md)。
+If you want to contribute: read [`CLA.md`](CLA.md) first.
 
-## 实验床
+## The testbed
 
-本项目在一台真实机器上长出来：一块 700G 的数据分区 + 一个救援宿主 + 两个空的实验槽位，可以随时把系统装坏再滚回来。
-机器事实见 [`README.txt`](README.txt)。
+This project grows on a real machine: a 700 GB data partition, a rescue host, and two empty experiment slots — so the system can be broken and rolled back at will.
+Machine facts are in [`README.txt`](README.txt).
 
-## 许可
+## License
 
-| 对象 | 许可 |
+| Subject | License |
 |---|---|
-| 代码 | GPL-3.0-only |
-| 文档 | CC BY-4.0 |
-| 名称 "TonyOS" | 保留 |
+| Code | GPL-3.0-only |
+| Documentation | CC BY-4.0 |
+| The name "TonyOS" | Reserved |

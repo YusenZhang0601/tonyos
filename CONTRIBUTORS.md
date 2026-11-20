@@ -1,13 +1,13 @@
-# 贡献者
+# Contributors
 
-签署 `CLA.md` 的方式：在这里追加一行，随 Pull Request 提交。
+To sign `CLA.md`: append a line here and submit it with your pull request.
 
-格式：
+Format:
 
 ```
-- 姓名或 ID <邮箱> — 同意 CLA（YYYY-MM-DD）
+- Name or handle <email> — agrees to the CLA (YYYY-MM-DD)
 ```
 
 ---
 
-（尚无外部贡献者）
+(No external contributors yet.)

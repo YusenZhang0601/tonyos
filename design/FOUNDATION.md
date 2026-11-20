@@ -1,403 +1,422 @@
-# 基（FOUNDATION）
+# The Base
 
-> **唯一设计权威。** 实现与本文冲突，以本文为准。
-> 要改本文，先在 `docs/DECISIONS.md` 留一条裁决，再改这里。
-> 版本：v0.6 · 2026-11-20
+> **The single source of design authority.** If an implementation disagrees with this document, this document wins.
+> To change it, first record a ruling in `docs/DECISIONS.md`.
+> Version: v0.7 · 2026-11-20
 
----
+### Terminology
 
-## 0. 身份
-
-**一句话**
-
-> 系统的主人是智能，不是人；人是宪法，不是操作者。
-
-**核心问题**
-
-> 一个智能，怎么在一台机器上住下来、干活，并且始终可问责。
-
-不是"AI 帮你干活"，是"**你不干活了**"。人不干活，但定边界；边界写在磁盘上，不在对话里。
-
-**产物形态**
-
-- 本质产物：**一套理念**（一组构成性规则）。
-- 落地形态：**一个完整的最小发行版**——别人怎么换、怎么改，只要理念相同，还是它。
-- 第一方出品必须极致；第三方允许不极致，但必须能接进来。
-
-**非目标**
-
-- 不是"装了个 agent 的桌面发行版"。
-- 不是 agent 框架（不绑模型、不绑宿主）。
-- 不是聊天框当桌面。
-- 不是系统监控面板。
-
----
-
-## 1. 基：四个谓词
-
-**判据**：一个谓词能留下，当且仅当它**不能被别的谓词推导出来**。只存不可推导的东西。
-
-系统里只有一种记录：
-
-```
-claim
-  id        内容哈希（名字即内容）
-  subject   关于谁（world / agent:xx / file:/etc/x / claim:xx）
-  predicate 四个之一（封闭）
-  value     值（大东西只存哈希）
-  by        谁主张（人 / agent / 传感器）
-  at        全序号 + 墙钟
-  because   [claim id...]   证据也是主张，递归到底
-  replaces  [claim id...]   撤回，不是删除
-```
-
-| 谓词 | 回答 | 失效方式 |
+| Term | Meaning | Standard name, where one exists |
 |---|---|---|
-| `is` | 世界是什么 | 错 |
-| `did` | 发生过什么 | 遗漏 |
-| `may` | 人定了什么规矩 | 被违反 |
-| `counts` | 什么算作什么 | 失效（被撤销 / 不再被认） |
+| **assertion** | the only record type in the system | assertion (truth maintenance systems); datom (Datomic) |
+| **justification** | the `because` field: what this assertion rests on | justification (TMS); provenance |
+| **retraction** | the `replaces` field: withdrawal without deletion | retraction (TMS) |
+| **no-go zone** | a ring the human draws around something; acting inside it requires approval | default-allow denylist + policy enforcement point (PEP) |
+| **red line** | an irreversible action; in this design, exactly `send` | non-compensatable action (saga); irreversible effect |
+| **audit trail** | the `did` chain — what actually happened | audit trail; event log |
+| **self-report** | what the system says about itself | self-description; introspection |
+| **the map** | the self-report's default view; the only thing loaded automatically | catalog; manifest |
+| **the Screen** | the human-facing surface: it shows *the agent*, not the machine | — (deliberately not "dashboard") |
+| **reference implementation** | a first-party implementation; always replaceable | reference implementation |
+| **invariant** | a property that cannot be replaced | invariant |
+| **seam** | a boundary across which replacement happens | seam (Feathers) |
+| **need-to-know** | an observer sees only what its task requires | need-to-know; compartmentalisation |
+| **policy compiler** | turns the full rule set into the fragment one task may see | policy compiler (policy-as-code) |
 
-### 1.1 三张封闭小表
+---
 
-**`did` 的动词只有三个**
+## 0. Identity
 
-| 动词 | 含义 |
+**One sentence**
+
+> The system's owner is the agent, not the human; the human is the constitution, not the operator.
+
+**The core question**
+
+> How does an agent come to live on a machine, do work, and remain accountable the whole time?
+
+This is not "an AI that helps you work" — it is "**you stop working**". The human does not operate, but sets boundaries; boundaries are written to disk, not spoken in chat.
+
+**What the artefact is**
+
+- What it really produces: **a set of ideas** (a set of constitutive rules).
+- What it ships as: **a complete minimal distribution** — others may change and replace anything; as long as the idea holds, it is still the same thing.
+- First-party work must be exemplary; third-party work need not be, but it must be able to plug in.
+
+**Non-goals**
+
+- Not a "desktop distro with an agent preinstalled".
+- Not an agent framework (binds neither model nor host).
+- Not a chat box used as a desktop.
+- Not a system monitoring dashboard.
+
+---
+
+## 1. The base: four predicates
+
+**Criterion**: a predicate earns its place only if it **cannot be derived from the others**. Store only what cannot be derived.
+
+There is exactly one record type in the system:
+
+```
+assertion
+  id        content hash (the name is the content)
+  subject   about whom (world / agent:xx / file:/etc/x / assertion:xx)
+  predicate one of four (closed)
+  value     the value (large things store only a hash)
+  by        who asserts it (human / agent / sensor)
+  at        a total sequence number + wall clock
+  because   [assertion id...]   evidence is itself assertions; recursion bottoms out
+  replaces  [assertion id...]   retraction, not deletion
+```
+
+| Predicate | Answers | How it fails |
+|---|---|---|
+| `is` | what the world is | wrong |
+| `did` | what happened | missed |
+| `may` | what rules the human set | violated |
+| `counts` | what counts as what | void (withdrawn / no longer accepted) |
+
+### 1.1 Three closed sub-vocabularies
+
+**`did` has exactly three verbs**
+
+| Verb | Meaning |
 |---|---|
-| `read` | 看，不改世界 |
-| `write` | 改本地的世界 |
-| `send` | 改本地之外的世界 |
+| `read` | look; changes nothing |
+| `write` | change the local world |
+| `send` | change the world outside the local one |
 
-`send` 单独列出：**它是唯一会越界的动作，所以它天然就是红线**。不可逆即 `send`，`send` 即不可逆。exec / move / 分配内存都是 read + write 的组合。
+`send` is listed separately because **it is the only action that crosses the boundary, and therefore the only red line**. Irreversible means `send`; `send` means irreversible. exec, move, allocate are all combinations of read and write.
 
-**`may` 的模式只有三个**
+**`may` has exactly three modes**
 
 `allow` / `require` / `deny`
 
-"要审批"是 `require`，不是第四种态度。禁地 = 默认 `allow`，圈内 `require`，圈底 `deny`。
+"Needs approval" is `require`, not a fourth attitude. No-go zones = `allow` by default, `require` inside the ring, `deny` at the core of it.
 
-**`counts` 的形态只有三个**
+**`counts` has exactly three forms**
 
-| 形态 | 意思 | 例 |
+| Form | Meaning | Example |
 |---|---|---|
-| **同一** | 这个算作那个的身份 | 换脑后算作同一个它 |
-| **成立** | 这些检查算作成功 | 20 工况残差达标算作本批成功 |
-| **代表** | 这个签名算作批准 | 人的签字算作批准 |
+| **identity** | this counts as the identity of that | after a brain swap, it counts as the same agent |
+| **satisfaction** | these checks count as success | 20 cases within tolerance counts as a successful batch |
+| **representation** | this signature counts as approval | a human's signature counts as approval |
 
-第四种形态出现时，是设计复审，不是打补丁。
+A fourth form means a design review, not a patch.
 
-### 1.2 无关性（为什么不能少）
+### 1.2 Independence (why none can be dropped)
 
-- `is` 表达不了 `did`：内容没有顺序、没有作者。
-- `did` 表达不了 `is`：发生过 ≠ 现在还是那样。
-- 两者表达不了 `may`：**事实可以错，规范不能被"错"，只能被违反。**
-- 三者表达不了 `counts`：它不报告、不记录、不许可，它**规定什么算作那个东西**。
+- `is` cannot express `did`: content has no order and no author.
+- `did` cannot express `is`: having happened is not still being so.
+- Neither can express `may`: **a fact can be wrong; a rule cannot be "wrong", only violated.**
+- None of the three can express `counts`: it neither reports, records, nor permits — it **stipulates what counts as that thing**.
 
-四种失效方式互不相同（错 / 漏 / 违 / 失效），这是四条不能合并的根本原因。
+Four different failure modes (wrong / missed / violated / void). That is why four cannot be merged into fewer.
 
-### 1.3 生成性（为什么够了）
+### 1.3 Generation (why four are enough)
 
-任何一句关于这台机器的话，只能是在说——**世界是什么 / 发生过什么 / 人定了什么规矩 / 什么算作什么**。没有第五种。
+Every statement about this machine can only be saying: **what the world is / what happened / what rules the human set / what counts as what.** There is no fifth kind.
 
-### 1.4 递归的底
+### 1.4 Where the recursion bottoms out
 
-证据链最终停在两类不可再证的根：
+The evidence chain ends at exactly two roots that cannot be further proven:
 
-1. **人的签字**（`counts`：签字算作批准）
-2. **硬件的度量**（可信启动链给出的测量值）
+1. **A human signature** (`counts`: a signature counts as approval)
+2. **A hardware measurement** (the value produced by a measured boot chain)
 
-这两条是内置的根定义，不可由 agent 产生。没有它们，`because` 链会无限回退。
+These two are built-in root definitions and cannot be produced by an agent. Without them the `because` chain would regress forever.
 
 ---
 
-## 2. 一切皆为投影
+## 2. Everything is a projection
 
-| 概念 | 怎么长出来 |
+| Concept | How it is derived |
 |---|---|
-| 状态 | 某 subject 上最新、未被 replaces 的 claim 集合 |
-| 证词 | `did` 链 |
-| 禁地 | `may` 的 `deny` / `require` 集合（默认 `allow`） |
-| 红线 | `did` 中 verb = `send` 的动作 |
-| 分级可见 | 观察者只能读到自己命名空间内 subject 的 claim |
-| 幻觉 | 拿不出 `because` 链的 claim，投影时排除 |
-| 撤销 | 加一条 `replaces`，历史不动 |
-| 忘记 | 从当前投影不可达的 claim，自动回收 |
-| 身份 / 连续性 | `counts`（同一） |
-| 批准 | `counts`（代表） |
-| 成功 / 完成 | `counts`（成立）+ 证据，**算出来的，不是它宣布的** |
-| 计划 / 意图 | `is`（agent 的目标）/ `did`（声明也是事实） |
-| 依赖 / 归属 / 别名 / 位置 | 投影计算，不存 |
-| 当前 | `counts` 指定"哪个引用算作当前" |
+| state | the newest non-replaced assertions about a subject |
+| audit trail | the chain of `did` |
+| no-go zones | the `deny` / `require` set of `may` (default `allow`) |
+| red line | any `did` whose verb is `send` |
+| need-to-know | an observer can only read assertions whose subject is in its own namespace |
+| hallucination | an assertion with no `because` chain is excluded at projection time |
+| undo | append a `replaces`; history does not move |
+| forgetting | assertions unreachable from the current projection are reclaimed automatically |
+| identity / continuity | `counts` (identity) |
+| approval | `counts` (representation) |
+| success / done | `counts` (satisfaction) plus evidence — **computed, not announced by the agent** |
+| plan / intent | `is` (the agent's goal) / `did` (declaring is also a fact) |
+| dependency / ownership / alias / location | computed by projections, never stored |
+| "current" | a `counts` assertion naming which reference counts as current |
 
-**代价**：很多话说不出来。说不出来的，只能去外面当默认件——这正是分层。
+**The cost**: many things cannot be said. What cannot be said has to live outside the core, as a separate implementation — which is exactly the point of the layering.
 
 ---
 
-## 3. 禁地
+## 3. No-go zones
 
-### 3.1 模型
+### 3.1 The model
 
-不是人画一片地让它活动，而是**人划一个圈，圈里的东西想动得先批准，没有批准坚决不能动**。
+Not "draw an area where it may act", but **the human draws a ring around something: acting on what is inside requires approval, and without approval it is absolutely not allowed.**
 
-| | 沙箱 / 白名单 | 禁地 / 黑名单（采用） |
+| | Sandbox / allowlist | No-go zones / denylist (adopted) |
 |---|---|---|
-| 默认 | 拒绝 | 放行 |
-| 人写的 | 允许什么 | **禁止什么** |
-| 代价 | 永远不够用 | 必须靠可逆与留痕兜底 |
+| Default | deny | allow |
+| What the human writes | what is permitted | **what is forbidden** |
+| Cost | never enough | must be backstopped by reversibility and audit trail |
 
-### 3.2 安全三支柱
+### 3.2 The three pillars of safety
 
-默认放行时，安全只能靠这三样：
+With allow-by-default, safety can only rest on three things:
 
-1. **红线是硬的**——撞上即停，不是"商量一下"。
-2. **可逆**——圈外随便动，但动了能退回去。
-3. **留痕**——退不回去时，至少查得清。
+1. **The red line is hard** — hitting it means stop, not "let's discuss".
+2. **Reversible** — act freely outside the ring, but every action can be taken back.
+3. **Recorded** — when it cannot be taken back, at least it can be traced.
 
-推论：**块级快照从"功能"升级为"地基"**。一开始就要 A/B 双槽 + 救援宿主，不是谨慎，是必需品。
+Corollary: **block-level snapshots are promoted from a feature to a foundation.** Starting with A/B slots plus a rescue host is not caution; it is a requirement of this model.
 
-### 3.3 红线怎么划：按可逆性，不按重要性
+### 3.3 How the red line is drawn: by reversibility, not by importance
 
-> 红线的定义不是"重要的东西"，是**"退不回去的东西"**。
+> The red line is not "the important things", it is **"the things you cannot take back"**.
 
-`did` 的 verb = `send` 即红线。不需要另立一份"不可逆清单"。
+Any `did` whose verb is `send` is the red line. No separate "irreversible list" needs maintaining.
 
-### 3.4 分级可见 = 条款编译器
+### 3.4 Need-to-know = a policy compiler
 
-- agent 看不到全部禁地，只看到当前任务相关的那一小部分。
-- "相关"不能由它自己判断，编译发生在它控制之外——但这是**禁地这条缝的内部实现**，不是新增一层。
-- 证词要记"它当时看到了哪几行"：问责问的是"它当时被允许知道什么"。
-- 它看不到地图上的红线，但碰得到墙：撞墙即停，然后申请。
+- The agent does not see the whole set of no-go zones, only the part relevant to the current task.
+- "Relevant" cannot be decided by the agent itself; compilation happens outside its control — but this is **an internal mechanism of the no-go zone seam, not a new layer**.
+- Audit trail must record *which lines it was shown*: accountability asks what it was permitted to know.
+- It cannot see the map's red lines, but it can hit the fence: hitting it means stop, then request.
 
-### 3.5 执行点在"手"，不在"脑"
+### 3.5 Enforcement lives in the hand, not the brain
 
-红线不能放在 agent 的自觉里，必须放在**动作出口**（执行器）。这是代码结构上的硬要求。
-
----
-
-## 4. 可逆
-
-### 4.1 公理
-
-> **世界上没有"修改"，只有"新版本 + 换指针"。**
-
-一旦成立，锁、半写状态、撕裂写、备份、恢复、脏读、合并冲突全部消失——因为没有任何东西被原地改过。
-
-### 4.2 只剩两个原语
-
-- **fork**：开一个新世界（O(1)，免费）
-- **prune**：丢掉一段历史（自动，见 4.4）
-
-快照 / 备份 / 事务 / 回滚——四个概念一起消失。
-
-### 4.3 全序事件 + 观察者投影
-
-- 唯一必须达成一致的，是**发生过什么、按什么顺序**。
-- 状态是**观察者的投影**：它看到的世界 = 它消费到第几条事件。
-- **没有全局的"现在"**，只有各自的"现在"。一致性只在边界（禁地、证词）要求。
-- 争用点只有一个：谁有权让引用前进。整个系统只需要**一个原子操作：CAS 一个引用**。
-
-### 4.4 记忆 = 可达性
-
-没人引用的东西自动回收。你唯一要决定的是"我还指着什么"，而"我还指着什么"就等于"我还在乎什么"。
-
-**忘记是自动的，而且语义正确：不可达即已忘。**
-
-### 4.5 时间即坐标
-
-历史永不删除，所以"昨天中午的状态"不是要恢复的东西，而是**一个仍然存在的引用**：
-
-> **"回到昨天"不是 restore，是 as-of 查询。**
-
-可逆性从"一个操作"变成"一个坐标系"：过去从未消失，只是暂时没有引用。
-
-### 4.6 进程不需要被撤销
-
-进程不是状态，是世界的读者。它死了就死了，世界还在，下一个读者接着读。
-
-> **你不撤销进程，你撤销世界。**
-
-内存不参与可逆性；连续性靠账本，不靠 RAM。
-
-### 4.7 三条硬规则
-
-1. **所有动作都在 fork 里做，提交才前进引用。** 否则"写一半崩了"无法表达（引用不前进 = 没发生）。
-2. **账本写不进，立刻停止一切。** 否则会做"没记录的事"。
-3. **改词表 = 一次 `counts`："算作同一个系统"。** 同一招可处理换脑、换代、换词表。
+The red line cannot live in the agent's good intentions. It must live at the **action exit** (the executor). This is a hard constraint on code structure.
 
 ---
 
-## 5. 记忆、视图与上下文
+## 4. Reversibility
 
-### 5.1 三个东西，别混
+### 4.1 The axiom
 
-| | 是什么 | 多大 |
+> **Nothing is ever modified; there is only a new version plus a pointer swap.**
+
+Once this holds, these all disappear: locks, half-written state, torn writes, backups, restores, dirty reads, merge conflicts — because nothing is ever changed in place.
+
+### 4.2 Only two primitives remain
+
+- **fork**: open a new world (O(1), free)
+- **prune**: drop a stretch of history (automatic, see 4.4)
+
+Snapshots / backups / transactions / rollbacks — four concepts disappear together.
+
+### 4.3 Total order plus observer projections
+
+- The only thing that must be agreed on is **what happened, in what order**.
+- State is **an observer's projection**: the world it sees is the prefix of events it has consumed.
+- **There is no global "now"**, only each observer's own. Consistency is required only at the boundaries (no-go zones, audit trail).
+- There is exactly one point of contention: who may advance the reference. The whole system needs **one atomic operation: a compare-and-swap on a reference.**
+
+### 4.4 Memory = reachability
+
+Anything nobody references is reclaimed automatically. The only thing you decide is what you still point at — and what you still point at is what you still care about.
+
+**Forgetting is automatic, and semantically correct: unreachable means forgotten.**
+
+### 4.5 Time as a coordinate
+
+History is never deleted, so "the state at noon yesterday" is not something to restore but **a reference that still exists**:
+
+> **"Go back to yesterday" is not a restore, it is an as-of query.**
+
+Reversibility turns from an operation into a coordinate system: the past never disappeared, it is merely unreferenced for now.
+
+### 4.6 Processes do not need to be undone
+
+A process is not state; it is a reader of the world. It dies, and the world remains for the next reader.
+
+> **You do not undo processes; you undo the world.**
+
+Memory does not participate in reversibility; continuity lives in the ledger, not in RAM.
+
+### 4.7 Three hard rules
+
+1. **Every action happens inside a fork; the reference advances only on commit.** Otherwise "crashed halfway through" cannot be expressed (an unadvanced reference means it never happened).
+2. **If the ledger cannot be written, everything stops.** Otherwise the system acts without recording.
+3. **Changing the vocabulary is a `counts` assertion: "counts as the same system".** The same move handles brain swaps, generations and vocabulary changes.
+
+---
+
+## 5. Memory, views and context
+
+### 5.1 Three different things
+
+| | What it is | How big |
 |---|---|---|
-| **账本** | 发生过的一切 | 可以很大，靠可达性回收 |
-| **视图** | 某观察者此刻看到的世界 | **有硬预算**，越界即设计错误 |
-| **摘要** | 能重建判断的最小依据 | 越小越好，视图的原料 |
+| **the ledger** | everything that happened | may be large; reclaimed by reachability |
+| **a view** | what one observer sees right now | **has a hard budget**; exceeding it is a design error |
+| **a digest** | the minimum needed to rebuild a judgement | as small as possible; the raw material for views |
 
-### 5.2 留什么
+### 5.2 What to keep
 
-> **过程的价值 = 未决程度。** 有结论了，过程就可以压成证据摘要；还没结论，过程才值得留着。
+> **The value of process equals undecidedness.** Once there is a conclusion, the process can be compressed into an evidence digest; only while undecided is the process worth keeping.
 
-- **永留**：结论、决定、规矩变更、签字、因果边界。
-- **限时留**：过程（试错的每一步、每次尝试、每个读数）——按窗口，出问题就冻结。
-- **可弃**：重复观测、可重算的派生、已被摘要覆盖的原始流。
+- **Keep forever**: conclusions, decisions, rule changes, signatures, causal boundaries.
+- **Keep for a window**: process (every attempt, every reading) — by policy window; freeze on incident.
+- **Discardable**: duplicate observations, recomputable derivations, raw streams already covered by a digest.
 
-**遗忘也留痕**：一次回收一条痕（范围、时间、依据）。不占空间，但能说清"忘了什么、凭什么忘"。
+**Forgetting leaves a trace too**: one trace per reclamation (range, time, reason). It costs nothing but makes it possible to say what was forgotten and on what grounds.
 
-### 5.3 默认不加载
+### 5.3 Default: don't load
 
-> **任何东西都不能自己进入上下文。** 一切进入的东西，都必须是被选中的。
+> **Nothing may enter the context on its own.** Everything that enters must have been selected.
 
-- 历史是图书馆，不是空气。
-- 没有"恢复上下文"这个操作——因为从来没有东西是环境的。
-- 每次 `read` 本身是一条 `did`，所以"它读了什么"可审计。
+- History is a library, not the air.
+- There is no "restore the context" operation — because nothing was ever ambient.
+- Every `read` is itself a `did`, so what it read is auditable.
 
-**这不只是性能属性，是安全属性。** 环境自动注入是 prompt injection 的唯一入口：文件、网页、日志里的文字自己爬进上下文。默认不加载 → 内容必须被显式读 → 注入在结构上失效。
+**This is a security property, not only a performance one.** Ambient context is the only entry point for prompt injection: text in files, web pages and logs walks into the context by itself. Default-don't-load means content must be explicitly read, so injection fails structurally — not by filtering, but because the pipe does not exist.
 
-### 5.4 地图：唯一的自动加载例外
+### 5.4 The map: the single auto-loaded exception
 
-- **地图 = 自述的默认视图**，不新开缝。
-- 它自动加载，**别的一律不许**。一条例外，才可审计："还有什么在自己爬进上下文？"——答案只有地图。
-- 一个源，两个读者：人看那屏，agent 查索引。
-- **地图必须一屏放得下。放不下，就是系统太大了。** 这是"极致"最好的度量。
-- 地图只列**类别与入口**，不列实例（"有 /lab 这个存储"，不是"有三万七千个文件"）。
-- **地图不缓存**：每次从当前账本生成，或按事件号增量更新。过期地图比没有地图更糟——它会基于错的地图提出合理但错误的结论。
+- **The map is the self-report's default view.** It does not open a new seam.
+- It loads automatically, and **nothing else may**. One exception is auditable: "what else is crawling into the context?" — only the map.
+- One source, two readers: the human reads the Screen, the agent queries the index.
+- **The map must fit on one screen. If it does not, the system is too big.** This is the best available measure of "exemplary".
+- The map lists **categories and entry points**, never instances ("there is a /lab store", not "there are 37,412 files").
+- **The map is not cached**: regenerated from the current ledger, or updated incrementally by sequence number. A stale map is worse than no map — it leads to reasonable-looking conclusions that are wrong.
 
-**自述的完整形态**：一屏地图 + 按需检索 + 读必留痕。
-
----
-
-## 6. 那屏
-
-四块，缺一不可：
-
-1. **它在干什么**——做到哪、卡在哪（工作现场，不是监控）
-2. **等你什么**——只有人能拍板的事（= 未满足的 `require`）
-3. **它是谁**——我有什么、手上有什么、我打算干什么
-4. **它眼里的你**——它对你的观察
-
-它不是系统监控面板：屏上显示的是"它"，不是机器的体检报告。
-它同时是**交接包**：新脑的初始上下文 = 那屏四块，不是全量账本。
-
-**它的自述谁来担保？** 拿不出 `because` 链的 claim 进不了投影；`counts` 规定"什么算作证据"。
+**The complete shape of the self-report**: one screen of map + retrieval on demand + every read leaves a trace.
 
 ---
 
-## 7. 分层
+## 6. The Screen
 
-| 东西 | 谁写 | 能不能改 |
+Four panels, none optional:
+
+1. **What it is doing** — how far, where it is stuck (a work site, not monitoring)
+2. **What it needs from you** — the things only a human can decide (= unsatisfied `require`)
+3. **Who it is** — what it has, what it is holding, what it intends
+4. **How it sees you** — its observations about the human
+
+It is not a monitoring dashboard: it shows *the agent*, not the machine's medical chart.
+It is also the **handoff packet**: a new brain's initial context is these four panels, not the whole ledger.
+
+**Who vouches for the self-report?** Assertions without a `because` chain cannot enter the projection; `counts` stipulates what counts as evidence.
+
+---
+
+## 7. Layering
+
+| Thing | Written by | Changeable |
 |---|---|---|
-| **性质**（四谓词 + 三支柱） | 我们，写死 | 不能 |
-| **禁地 / 定义**（`may` / `counts`） | 人 | 人能改，agent 不能 |
-| **默认件**（一切实现） | 我们 | 谁都能换 |
+| **Invariants** (four predicates + three pillars) | us, hard-coded | no |
+| **No-go zones / definitions** (`may` / `counts`) | the human | the human yes, the agent no |
+| **Reference implementations** (all implementations) | us | anyone |
 
-**第一方件是"默认件"，不是"特权件"**：必须能回答"删掉它，别人怎么补"。答不上来，它不是默认件。
+**First-party work is a "reference implementation", not a "privileged component"**: it must answer "if you delete it, how does someone else fill the gap?" If it cannot, it is not a reference implementation.
 
-发行版 = 一套默认件 + 一套缝 + 几条性质 + 一份禁地。
+A distribution = a set of reference implementations + a set of seams + a few invariants + a set of no-go zones.
 
-**规则不需要审批，只需要可见；冲突不自动解决，只自动暴露。**（账本不可变已免费提供"暗改不可能"；两条活跃规则矛盾时标"未决"，浮到那屏。）
+**Rules need no approval, only visibility; conflicts are not resolved automatically, only surfaced automatically.** (An immutable ledger already makes silent edits impossible; when two active rules contradict each other, mark the conflict "undecided" and surface it on the Screen.)
 
-**`counts` 的作者**：人写，agent 可提议。起草与生效分开——agent 提一条标为 proposal，不生效；人签署才生效。提议本身也是一条 claim，可审计。
-
----
-
-## 8. 工程纪律
-
-1. **不许新增"层"。** 加功能只有三种合法做法：加观察者、加 claim、加投影。屎山不是代码多，是边界不清。
-2. **热路径只有一条**：动作 → 证词 → 投影。有第二条路，就有第二条真相。
-3. **第一周就测**：动作端到端延迟。"极致性能"不测就是玄学；2 核机器当磨刀石。
-
-**"极致"五道门（第一方件）**：一屏内能读懂 / 零外部依赖 / 内存与延迟有上界 / 换掉不伤别人 / 没有配置文件。
-
-**取舍**：极致只给默认件，外围允许丑。可替换性的真正用处，是让人不必把每一处都做对。
+**Who writes `counts`**: the human writes; the agent may propose. Drafting and taking effect are separate — the agent may submit a `counts` assertion marked as a proposal, which has no effect until a human signs it. The proposal is itself an assertion and remains auditable.
 
 ---
 
-## 9. 底盘
+## 8. Engineering discipline
 
-### 9.1 底盘不是"一个操作系统"，是"一堆我们做不出来的东西"
+1. **No new layers.** Functionality may only be added as an observer, an assertion, or a projection. A mess is not too much code; it is unclear boundaries.
+2. **Exactly one hot path**: action → audit trail → projection. A second path means a second truth.
+3. **Measure from week one**: end-to-end action latency. "Extreme performance" that is not measured is folklore. A 2-core machine is the whetstone.
 
-我们能写软件，不能凭空造：页表与中断、驱动、隔离的硬件基础（MMU / ring / 虚拟化）、时间的物理来源、启动的信任根、设备。
+**The five gates of "exemplary" (for reference implementations)**: readable on one screen / zero external dependencies / explicit memory and latency bounds / replaceable without hurting others / no configuration files.
 
-其余——存储格式、调度策略、权限模型、投影、界面——**全是我们的算法**。
-
-所以问题不是"Linux 还是非 Linux"，而是：**哪些别人的抽象必须挡在门外。**
-
-### 9.2 我们要的只有六样
-
-1. 跑我们的代码，能隔离、能限资源
-2. 一块能持久、能随机读的块设备
-3. 单调时钟
-4. 显示与输入的最短通路
-5. 从固件到我们第一行代码的可度量启动链
-6. 没有多余抽象的硬件接口
-
-（原第七条"块级快照"已撤销，见 9.4。）
-
-### 9.3 纪律比选型重要
-
-> **内核只向我们提供三样东西：进程、内存、设备。其余一概不用。**
-
-不建文件系统语义、不用 systemd、不读 `/proc` 做事实来源、不用 inode 当身份标识。
-
-**纯度取决于调用面，不取决于裁剪面。** 编进去但从不调用，等于不存在。
-
-### 9.4 不需要块级快照
-
-因为不可变性在**我们自己的存储里**，不在文件系统里。装过的包、/etc、服务配置都是 claim 引用 blob，随时可生成。账本之外真正存在的东西只剩：`vmlinuz` + 我们的代码。它们极小，A/B 槽足够。
-
-> 需要的不是快照，是**一个不会覆盖的日志**。
-
-### 9.5 路线：L1 + L2
-
-- **L1** 裁剪内核：按本机硬件定制 config，保留进程 / 内存 / 块设备 / 网络 / 显示 / 输入。
-- **L2** 零发行版：自己当 PID 1；不用 systemd / udev；不 mount 通用文件系统；不链 glibc（musl 或直接 syscall）；存储直接对块设备读写。
-- **L3**（内核降为驱动域，我们的 OS 在外跑）：**暂不做，记为工程债务。**
-
-> **L3 是工程上的妥协，不是理念上的让步。有能力时必须做彻底。**
-
-### 9.6 度量
-
-> **整个系统里，别人的代码只应该有两项：`vmlinuz`，和硬件固件。**
-> 除了这两个，`find / -type f` 出来的每个文件都该是我们写的。
-
-这条可当门禁查；未达成前，把"还借着的东西"记成 burn-down 清单，不靠记忆。
+**The tradeoff**: exemplary applies only to reference implementations; the periphery is allowed to be ugly. That is what replaceability is really for — it means you do not have to get every part right.
 
 ---
 
-## 10. 试纸：十张已过的场景
+## 9. The substrate
 
-| # | 场景 | 结论 |
+### 9.1 The substrate is not "an operating system", it is "a pile of things we cannot physically build"
+
+We can write software; we cannot conjure page tables, interrupts, drivers, the hardware basis of isolation (MMU, rings, virtualisation), the physical source of time, the root of trust at boot, or devices.
+
+Everything else — storage format, scheduling policy, permission model, projections, interface — **is our own algorithm**.
+
+So the question is not "Linux or not Linux", it is: **which foreign abstractions must be kept outside the door.**
+
+### 9.2 We need exactly six things
+
+1. Run our code, with isolation and resource bounds
+2. A block device that persists and allows random reads
+3. A monotonic clock
+4. The shortest path to display and input
+5. A measured boot chain from firmware to our first line of code
+6. A hardware interface with no surplus abstraction
+
+(The former seventh item, block-level snapshots, is withdrawn — see 9.4.)
+
+### 9.3 Discipline matters more than selection
+
+> **The kernel gives us three things only: processes, memory, devices. Nothing else.**
+
+No filesystem semantics of our own, no systemd, no reading `/proc` as a source of fact, no inode as identity.
+
+**Purity depends on the call surface, not the build surface.** Compiled in but never called is the same as absent.
+
+### 9.4 No block-level snapshots
+
+Because immutability lives in **our own storage**, not in the filesystem. Installed packages, `/etc`, service configuration are all assertions pointing at blobs, regenerable at any time. Outside the ledger, only two things genuinely exist: `vmlinuz` and our own code. They are tiny; A/B slots suffice.
+
+> What we need is not a snapshot, but **a log that never overwrites**.
+
+### 9.5 The route: L1 + L2
+
+- **L1** — a trimmed kernel: a config built for this machine's hardware, keeping processes / memory / block devices / network / display / input.
+- **L2** — zero distribution: we are PID 1; no systemd, no udev; no mounting general-purpose filesystems; no glibc (musl or direct syscalls); storage talks to the block device directly.
+- **L3** — the kernel demoted to a driver domain, our OS running outside it: **not now, recorded as technical debt.**
+
+> **L3 is an engineering compromise, not a concession in principle. When we are able, it must be done fully.**
+
+### 9.6 The measure
+
+> **The system should contain exactly two pieces of other people's code: `vmlinuz`, and hardware firmware.**
+> Everything `find / -type f` returns should be ours.
+
+This can be checked by a gate; until it holds, record what is still borrowed as a burn-down list rather than relying on memory.
+
+---
+
+## 10. Test cases: ten already passed
+
+| # | Scenario | Result |
 |---|---|---|
-| 1 | 两个 agent 同时写同一文件 | ✔ 锁消失，争用变成"谁有权前进引用" |
-| 2 | 写一半崩了 | ✔ 动作在 fork 内，引用不前进 = 没发生 |
-| 3 | agent 调子 agent | ✔ 责任链靠 `because` 可追 |
-| 4 | 收到外部邮件 | ✔ 网关 `did(read)`；但对方删了东西你永远不知道 |
-| 5 | 每天必须备份 | ✔ `may require` + 时间；逾期由投影算出 |
-| 6 | 两个人给相反指令 | ⚠ 能写，但"怎么定优先"不在词表里 |
-| 7 | 升级系统 / 改词表 | ✔ 用 `counts`："算作同一个系统" |
-| 8 | 谁能看账本的哪一段 | ⚠ 能写，真隐私靠加密 |
-| 9 | 磁盘满，账本写不进 | ✔ 硬规则：立刻停止 |
-| 10 | 一年后换机器 | ✔ 迁移是"读"，不是"搬" |
+| 1 | Two agents write the same file at once | ✔ locks vanish; contention becomes "who may advance the reference" |
+| 2 | Crash halfway through a write | ✔ actions run inside a fork; an unadvanced reference means nothing happened |
+| 3 | An agent calls a sub-agent | ✔ the chain of responsibility is traceable via `because` |
+| 4 | An email arrives from outside | ✔ the gateway records `did(read)`; but you can never know if the other side deleted something |
+| 5 | A daily mandatory backup | ✔ `may require` plus time; overdue is computed from the absence of a matching `did` |
+| 6 | Two humans give opposite instructions | ⚠ expressible, but *how to prioritise* is not in the vocabulary |
+| 7 | Upgrading the system / changing the vocabulary | ✔ via `counts`: "counts as the same system" |
+| 8 | Who may read which stretch of the ledger | ⚠ expressible; real privacy needs encryption |
+| 9 | Disk full, the ledger cannot be written | ✔ hard rule: stop everything |
+| 10 | Moving to a new machine a year later | ✔ migration is a read, not a move |
 
-**从十张试纸得到的边界：**
+**The boundary the ten cases reveal:**
 
-> **四个谓词是语言，不是策略。**
+> **The four predicates are a language, not a policy.**
 
-它们能让你把任何事**写下来**，但不能替你做**决定**：冲突听谁的、谁先跑、怎么加密、崩了怎么恢复——这些是策略，属于默认件与人。
+They let you **write down** anything; they cannot make **decisions** for you: whose rule wins, what runs first, how to encrypt, how to recover. Those are policy, belonging to reference implementations and to the human.
 
-**"写下来"不等于"解决了"。**
+**Writing something down is not the same as solving it.**
 
 ---
 
-## 11. 开放问题
+## 11. Open questions
 
-1. **缝这一层**：暂缓（D-014）。等探针看哪些边界真被替换过。
-2. **第一方件清单**：暂缓（D-021）。
-3. **地图预算**："一屏"折合多少字节，暂缓（D-022）。
-4. `counts` 的词汇治理：人写 + 提议是否足以防膨胀，需在原型里验证（D-019）。
-5. v0 的"一键装 / 一键滚回"在现有四分区布局上怎么落地。
-6. "人"本身会变化：规则按时间演替；真正同时的冲突如何处理。
-7. 可信启动链在探针阶段缺失：`because` 链的根只有"人签字"是真的，"硬件度量"必须显式标为**假设**，不能假装是证据。
+1. **The seam layer** — deferred (D-014). Wait until the probe shows which boundaries are actually replaced.
+2. **The reference implementation list** — deferred (D-021).
+3. **The map budget** — how many bytes "one screen" is — deferred (D-022).
+4. **`counts` vocabulary governance** — whether "human writes, agent proposes" is enough to prevent bloat; verify in the prototype (D-019).
+5. **v0 install / rollback** — how it lands on the existing four-partition layout.
+6. **The human is not a monolith** — rules succeed each other in time; genuinely simultaneous conflicts are undesigned.
+7. **The measured boot chain is absent during the probe**: the only true root of the `because` chain is the human signature. The missing hardware measurement must be marked explicitly as an **assumption**, never dressed up as evidence.

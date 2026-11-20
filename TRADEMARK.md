@@ -1,29 +1,29 @@
-# 商标政策
+# Trademark policy
 
-**"TonyOS" 名称与相关标识保留所有权利，不受本仓库代码许可证约束。**
+**The name "TonyOS" and its marks are all rights reserved, and are not covered by the code licence.**
 
-代码可以随便拿（GPL-3.0），名字不行。这两件事在许可证里是分开的。
+The code is free to take (GPL-3.0). The name is not. These are separate things, and the licence says so explicitly.
 
-## 允许
+## Permitted
 
-- 使用、修改、分发本仓库的代码与文档，遵守各自的许可证（见 `LICENSING.md`）。
-- 在事实性陈述中提及本项目，例如"基于 TonyOS 的设计"、"与 TonyOS 兼容"。
-- 在非商业的文章、教学、研究中引用本项目的名字与链接。
+- Use, modify and distribute the code and documentation, under their respective licences (see `LICENSING.md`).
+- Refer to the project factually, e.g. "based on TonyOS's design", "compatible with TonyOS".
+- Quote the project's name and link in non-commercial writing, teaching and research.
 
-## 不允许
+## Not permitted
 
-- 把修改版、分支版、衍生发行版命名为 "TonyOS" 或任何易混名称。
-- 使用本项目名称或标识暗示官方身份、背书、或认证，而实际不是。
-- 在商标、域名、应用商店名称中使用该名称。
+- Naming a modified version, fork or derivative distribution "TonyOS" or anything confusingly similar.
+- Using the name or marks to imply official status, endorsement or certification that does not exist.
+- Using the name in trademarks, domain names or app-store listings.
 
-## 官方构建
+## Official builds
 
-**官方构建**指由项目版权持有人在本仓库发布、或明确授权的构建。
+An **official build** is one published by the copyright holder from this repository, or one explicitly authorised.
 
-只有官方构建可以使用 "TonyOS" 名称。任何其他构建必须改名——改成一个自己起的名字，这对双方都更清楚。
+Only official builds may use the name "TonyOS". Every other build must be renamed — pick your own name; it is clearer for everyone.
 
-## 请求授权
+## Requesting permission
 
-想以官方名义分发，或在产品名中引用本项目名称，请在本仓库开一个 Issue 说明用途。授权原则：**只要构建通过一致性检查，授权免费。**
+To distribute under the official name, or to reference the name in a product name, open an Issue describing the use. The principle: **if the build passes the conformance checks, permission is free.**
 
-本项目尚未注册任何商标。本文件说明的是当前的品牌立场，不是注册商标权的声明。
+No trademark has been registered. This document states the current brand position, not a claim to a registered mark.

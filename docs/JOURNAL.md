@@ -1,9 +1,10 @@
-# 工作流水
+# Work log
 
-一行一天。只记真实发生的事，不记计划。
+One line per day. Only what actually happened, never plans.
 
-| 日期 | 做了什么 |
+| Date | What happened |
 |---|---|
-| 2026-11-20 | 访谈定下理念与基：主体换位、人是宪法、禁地（黑名单）、四谓词（is/did/may/counts）、默认不加载。建项目骨架与门禁。 |
-| 2026-11-20 | 七件裁决：R2 秘密隔离到 `.machine/` + git init；R3 底盘 L1+L2（L3 记工程债务）；R4 counts 人写+可提议；R6 探针两步（装包→发邮件，假世界）。R1/R5/R7 暂缓并留复查条件。 |
-| 2026-11-20 | 许可证定版（D-023）：GPL-3.0-only + CC BY-4.0 文档 + 商标保留 + CLA。放弃许可费，换标准形成。仓库公开。 |
+| 2026-11-20 | Interview settled the thesis and the base: the agent is the owner, the human is the constitution, no-go zones (denylist), four predicates (is/did/may/counts), default don't load. Project skeleton and gate created. |
+| 2026-11-20 | Seven rulings: secrets isolated to `.machine/` + git init; substrate L1+L2 (L3 as technical debt); `counts` human-written with agent proposals; probe in two steps (install → send, fake world). Seams / implementation list / map budget deferred with review triggers. |
+| 2026-11-20 | Licence settled (D-023): GPL-3.0-only + CC BY-4.0 docs + reserved name + CLA. Licence revenue given up in exchange for standard formation. Repository made public. |
+| 2026-11-20 | Repository translated to English; coined terms aligned with established vocabulary (assertion / audit trail / reference implementation / technical debt / need-to-know / policy compiler), keeping invented names only where no standard term exists. |

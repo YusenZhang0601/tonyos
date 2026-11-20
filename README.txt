@@ -1,4 +1,4 @@
-# Tony OS Dev — Multi-Slot OS Lab (/lab)
+# TonyOS dev — multi-slot OS lab (/lab)
 # Machine: Lenovo ideacentre AIO 510-23ASR (personal-lenovo-aio)
 
 Partitions on /dev/sda:

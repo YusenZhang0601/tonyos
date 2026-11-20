@@ -1,41 +1,40 @@
-# 现状
+# Status
 
-> 手写，只放战略判断与待裁。结构由门禁保证，不在这里复述。
+> Written by hand. Only strategic judgements and open rulings. Structure is enforced by the gate, not restated here.
 
-## 阶段
+## Phase
 
-设计（基已到 v0.6，尚未写代码）
+Design (the base is at v0.7; no code yet)
 
-## 在干什么
+## Working on
 
-把"agent-native OS"的第一性原理压成可执行的基。第二轮裁决已落账：
-底盘走 L1+L2（L3 记为工程债务）、`counts` 人写 + agent 可提议、探针分两步。
+Compressing "agent-native OS" from first principles into an executable base. Second round of rulings is on record: the substrate goes L1+L2 (L3 recorded as technical debt), `counts` is human-written with agent proposals, the probe runs in two steps, the licence is settled.
 
-## 卡点
+## Blocked
 
-无硬阻塞。所有未定项都是"暂缓"，不是"卡住"。
+Nothing hard. Every open item is deliberately deferred, not stuck.
 
-## 下一步
+## Next
 
-探针第一步：**装包**，在 `/lab/probe/world/` 这个假世界里跑通
-`read → write → 引用前进 → 回滚`，产出一份可读账本 + 两条投影（"它在干什么" / "等你什么"）。
-第二步再用"发邮件"撞 `send` 红线与签字流程。
+Probe step one: **install a package**, in the fake world at `/lab/probe/world/`, running
+`read → write → reference advance → rollback`, producing a readable ledger plus two projections ("what it is doing" / "what it needs from you").
+Step two then hits the `send` red line with an email.
 
-判断成功的标准：**用四个谓词写不满一屏，就是词表错了。**
+The success test: **if one real event cannot be written in four predicates within one screen, the vocabulary is wrong.**
 
-## 待裁
+## Open rulings
 
-- **缝这一层**（D-014）：暂缓，探针后复查。
-- **第一方件清单**（D-021）：暂缓，两个探针后复查。
-- **地图预算**（D-022）：暂缓，第一版地图出来后复查。
-- **v0 一键装 / 一键滚回**：在现有四分区上怎么落地，尚未设计。
-- **真正同时的冲突**：人同一瞬间给两条相反指令，如何处理，未设计。
+- **The seam layer** (D-014): deferred; review after the probe.
+- **Reference implementation list** (D-021): deferred; review after both probes.
+- **Map budget** (D-022): deferred; review once a first map exists.
+- **v0 install / rollback**: how it lands on the existing four partitions — not designed yet.
+- **Genuinely simultaneous conflicts**: two contradictory instructions from the human at the same instant — not designed yet.
 
-## 健康
+## Health
 
-- 设计权威：`design/FOUNDATION.md` v0.6
-- 决策账：`docs/DECISIONS.md` D-001 … D-022（含 3 条取代链）
-- 门禁：`tools/check.sh`（结构）
-- 仓库：`/lab` 已 `git init`（main），已提交并推送至 GitHub 公开仓库
-- 许可：代码 GPL-3.0-only / 文档 CC BY-4.0 / 名称保留 / 贡献需 CLA（D-023）
-- 尚无代码，所以还没有"测试"这回事
+- Design authority: `design/FOUNDATION.md` v0.7
+- Decision log: `docs/DECISIONS.md` D-001 … D-024 (3 supersession chains)
+- Gate: `tools/check.sh` (structure)
+- Repository: `/lab`, `main`, public at github.com/YusenZhang0601/tonyos
+- Licence: code GPL-3.0-only / docs CC BY-4.0 / name reserved / contributions require a CLA (D-023)
+- No code yet, so there is no "test suite" to speak of

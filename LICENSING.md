@@ -1,34 +1,34 @@
-# 许可范围
+# Licensing scope
 
-本项目按"代码 / 文档 / 名字"三种东西分开许可。三者独立，别混。
+This project is licensed as three separate things: code, documentation, and the name. They are independent — do not conflate them.
 
-| 对象 | 许可 | 文件 |
+| Subject | Licence | File |
 |---|---|---|
-| 代码（`tools/`、将来的实现） | **GPL-3.0-only** | `LICENSE` |
-| 文档（`design/`、`docs/`、`AGENTS.md`、`README.*`） | **CC BY-4.0** | `LICENSE-DOCS` |
-| 名称与标识（"TonyOS"） | 保留权利，见商标政策 | `TRADEMARK.md` |
-| 外部贡献 | 需签贡献者协议 | `CLA.md` |
+| Code (`tools/`, all future implementation) | **GPL-3.0-only** | `LICENSE` |
+| Documentation (`design/`, `docs/`, `AGENTS.md`, `README.*`) | **CC BY-4.0** | `LICENSE-DOCS` |
+| Name and marks ("TonyOS") | All rights reserved — see the trademark policy | `TRADEMARK.md` |
+| Outside contributions | Contributor License Agreement required | `CLA.md` |
 
-SPDX 标识：代码文件用 `GPL-3.0-only`，文档用 `CC-BY-4.0`。
+SPDX identifiers: `GPL-3.0-only` for code, `CC-BY-4.0` for documentation.
 
-## 为什么这样分
+## Why it is split this way
 
-**代码用 GPL，不用宽松许可。**
-商用完全免费——谁都能拿去卖、去预装、集成进产品，所以标准才可能形成。
-但改了必须公开，所以没人能拿它做一个闭源分支把生态分裂走。
+**Code uses GPL, not a permissive licence.**
+Commercial use is entirely free — anyone may sell it, preinstall it, build it into a product — which is the only way a standard can form.
+But modifications must be published, so nobody can take it into a closed fork and split the ecosystem.
 
-**为什么是 `-only` 而不是 `-or-later`。**
-`-or-later` 等于把"将来某版许可证长什么样"的决定权交出去。本项目要保留这个决定权，所以锁定 v3。
-（与 Linus 对 GPLv2 的选择同理，只是我们选 v3，因为需要专利授权与反锁死条款。）
+**Why `-only` rather than `-or-later`.**
+`-or-later` hands the decision about what a future licence version says to someone else. This project keeps that decision.
+(The same reasoning Linus applied to GPLv2; we choose v3 because we want the patent grant and the anti-lockdown clause.)
 
-**为什么还要 CLA。**
-GPL 不阻止你以后做双授权，但前提是你**拥有或控制全部代码**。外面来的贡献如果没有授权，一个人的 50 行就能卡住整笔商业授权。CLA 只解决这一件事，不改变项目对社区的承诺。
+**Why a CLA as well.**
+GPL does not prevent dual licensing later, but only if you **own or control all of the code**. Without a grant, fifty contributed lines can block an entire commercial licence. The CLA solves exactly that and changes nothing about the project's promise to the community.
 
-**为什么文档单独用 CC BY。**
-文档的价值在流传与引用，不在锁住。CC BY-4.0 只要求署名——这正是我们想要的：**用这套理念可以，但要说是谁的。**
+**Why documentation uses CC BY.**
+Documentation's value is in being circulated and quoted, not locked up. CC BY-4.0 requires only credit — which is exactly what we want: **use these ideas, but say whose they are.**
 
-## 这里没有的东西
+## What is not here
 
-没有"禁止商用"的条款。任何人可以拿它赚钱，不用付我们钱。
-我们放弃许可费，换的是**被采用、被预装、成为参考实现的可能**。
-护城河不在许可证里，在商标、官方构建、和"这套设计是我们先做出来的"这件事上。
+There is no non-commercial clause. Anyone may make money with this and owes us nothing.
+We give up licence fees in exchange for **being adopted, being preinstalled, becoming the reference**.
+The moat is not in the licence. It is in the name, the official builds, and the fact that this design got here first.

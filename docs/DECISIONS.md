@@ -1,167 +1,176 @@
-# 决策账
+# Decision log
 
-append-only。每条四字段：背景 → 裁决 → 后果 → 关系。
-被推翻的**不删**，标"已被 D-0xx 取代"，并在新条目里写取代关系（双向）。
+Append-only. Every entry has four fields: context → ruling → consequences → relations.
+Overturned entries are **never deleted**: they are marked "superseded by D-0xx", and the new entry names what it supersedes (both directions).
 
 ---
 
-## D-001 主体换位
+## D-001 The agent is the owner
 
-- **背景**：现有 agent 产品的主语仍是人——人下指令、人验收、人收拾。从第一性原理看，这是"AI 寄居在别人的系统上"。
-- **裁决**：系统的主人是智能，不是人。系统是它的身体。
-- **后果**：界面、权限、日志全部围绕"它"组织；那屏显示的是它，不是机器指标。
-- **关系**：无 predecessor；被 D-002 加固。
+- **Context**: existing agent products still have the human as the subject — the human instructs, reviews, cleans up. From first principles, that is "an AI living inside someone else's system".
+- **Ruling**: the system's owner is the agent, not the human. The system is its body.
+- **Consequences**: interface, permissions and logs are organised around *it*; the Screen shows the agent, not machine metrics.
+- **Relations**: no predecessor; reinforced by D-002.
 
-## D-002 人是宪法，不是操作者
+## D-002 The human is the constitution, not the operator
 
-- **背景**：主体换位后，人的位置需要重新定义，否则"责任在谁"无法回答。
-- **裁决**：人不干活，但定边界。边界写在磁盘上（禁地、定义），不在对话里。
-- **后果**：边界必须可查、有署名、有时间；问责问的是"当时被允许什么"。
-- **关系**：加固 D-001；依赖 D-004。
+- **Context**: once the subject changes, the human's position must be redefined, or "who is responsible" cannot be answered.
+- **Ruling**: the human does not operate, but sets boundaries. Boundaries are written to disk (no-go zones, definitions), not spoken in chat.
+- **Consequences**: boundaries must be inspectable, signed and timestamped; accountability asks what was permitted at the time.
+- **Relations**: reinforces D-001; depends on D-004.
 
-## D-003 沙箱白名单（默认拒绝）
+## D-003 Sandbox allowlist (default deny)
 
-- **背景**：初版按常规做法，给 agent 一个"允许活动的范围"。
-- **裁决**：白名单 + 默认拒绝。
-- **后果**：白名单永远不够用，与"所有事都能办"直接冲突。
-- **关系**：**已被 D-004 取代**。
+- **Context**: the first version followed the conventional approach: give the agent "an area it may act in".
+- **Ruling**: allowlist plus default deny.
+- **Consequences**: an allowlist is never complete, and it collides head-on with "it should be able to do anything".
+- **Relations**: **superseded by D-004**.
 
-## D-004 禁地：黑名单，默认放行
+## D-004 No-go zones: denylist, allow by default
 
-- **背景**：D-003 的白名单无法覆盖"通用"，且每加一个能力都要改白名单。
-- **裁决**：人只划圈（禁地），圈内须批准，圈外默认放行。
-- **后果**：安全不能靠事先许可，只能靠三支柱——红线硬 / 可逆 / 留痕；块级快照从功能升级为地基。
-- **关系**：**取代 D-003**；依赖 D-005。
+- **Context**: D-003's allowlist cannot cover "general purpose"; every new capability required editing the list.
+- **Ruling**: the human only draws rings (no-go zones); inside a ring requires approval; outside is allowed by default.
+- **Consequences**: safety cannot rest on prior permission, only on three pillars — a hard red line / reversibility / an audit trail. Block-level snapshots are promoted from a feature to a foundation.
+- **Relations**: **supersedes D-003**; depends on D-005.
 
-## D-005 红线 = 不可逆 = send
+## D-005 Red line = irreversible = send
 
-- **背景**：需要一条不会随需求膨胀的红线定义。
-- **裁决**：不按重要性划，按可逆性划。`did` 的动词只有 read / write / send，`send` 是唯一越界动作。
-- **后果**：不需要维护"不可逆清单"；不可逆即 send。红线的执行点必须在"手"（执行器），不能在"脑"。
-- **关系**：支撑 D-004。
+- **Context**: a red-line definition was needed that would not grow with requirements.
+- **Ruling**: draw it by reversibility, not importance. `did` has only three verbs — read / write / send — and `send` is the only one that crosses the boundary.
+- **Consequences**: no "irreversible list" to maintain. Enforcement must live in the hand (the executor), not the brain.
+- **Relations**: supports D-004.
 
-## D-006 基：四个谓词
+## D-006 The base: four predicates
 
-- **背景**：需要"最小生成集"——能导出一切，且少一个不行。
-- **裁决**：`is` / `did` / `may` / `counts`。判据是"不可推导才留下"；四者失效方式不同（错 / 漏 / 违 / 失效）。
-- **后果**：一切系统概念皆为投影；词表封闭，新需求必须翻译，翻不过来就是默认件的事。
-- **关系**：吸收 D-007。
+- **Context**: a minimal generating set was needed — enough to derive everything, with nothing redundant.
+- **Ruling**: `is` / `did` / `may` / `counts`. The criterion is "keep only what cannot be derived"; the four fail in four different ways (wrong / missed / violated / void).
+- **Consequences**: every system concept becomes a projection; the vocabulary is closed, so new requirements must be translated — what cannot be translated belongs to a reference implementation.
+- **Relations**: absorbs D-007.
 
-## D-007 擦掉 will
+## D-007 Drop `will`
 
-- **背景**：早期把"意图"单列为第五个谓词。
-- **裁决**：意图 = `is(agent, 目标)`；声明也是 `did`。计划一旦说出口就是事实。
-- **后果**：不存在"意图 vs 实际"两套数据，漂移问题在结构上消失。
-- **关系**：被 D-006 吸收。
+- **Context**: an early version made "intent" a fifth predicate.
+- **Ruling**: intent is `is(agent, goal)`; declaring is also a `did`. A plan, once spoken, is a fact.
+- **Consequences**: there is no separate "intent vs. reality" dataset, so drift disappears structurally.
+- **Relations**: absorbed by D-006.
 
-## D-008 全序事件 + 观察者投影
+## D-008 Total order plus observer projections
 
-- **背景**：全局状态与共享指针会引入锁、争用与"谁的真相"。
-- **裁决**：只保证"发生过什么、按什么顺序"；状态是观察者的投影。没有全局"现在"。
-- **后果**：无全局锁；一致性只在边界（禁地、证词）要求；争用点只剩"谁有权让引用前进"（一次 CAS）。
-- **关系**：支撑 D-011。
+- **Context**: global state and a shared pointer introduce locks, contention and the question of whose truth wins.
+- **Ruling**: guarantee only "what happened, in what order"; state is an observer's projection. There is no global "now".
+- **Consequences**: no global lock; consistency is required only at the boundaries (no-go zones, audit trail); the only contention left is who may advance the reference (a single compare-and-swap).
+- **Relations**: supports D-011.
 
-## D-009 显式修宪（强制替换链）
+## D-009 Explicit amendment (mandatory supersession chain)
 
-- **背景**：担心规则被静默改动，形成"暗规则"。
-- **裁决**：规则变更必须留显式替换链，否则报警。
-- **后果**：过重，给日常带来流程负担。
-- **关系**：**已被 D-010 取代**。
+- **Context**: the worry was silent rule changes producing "shadow rules".
+- **Ruling**: any rule change must leave an explicit supersession chain, or the system raises an alarm.
+- **Consequences**: too heavy; it imposes process on daily work.
+- **Relations**: **superseded by D-010**.
 
-## D-010 冲突自动暴露，不要求审批
+## D-010 Surface conflicts, do not require approval
 
-- **背景**：账本不可变 + 只追加，已经免费提供了"暗改不可能"——D-009 是重复建设。
-- **裁决**：不要求人走流程，只要求可见。两条活跃规则矛盾时标"未决"，浮到那屏。
-- **后果**：平时零成本，真冲突才找人。
-- **关系**：**取代 D-009**。
+- **Context**: an immutable, append-only ledger already makes silent edits impossible — D-009 was duplicated machinery.
+- **Ruling**: no process required. Only visibility required. When two active rules contradict each other, mark the conflict "undecided" and surface it on the Screen.
+- **Consequences**: zero cost in normal operation; it only asks the human when a real conflict appears.
+- **Relations**: **supersedes D-009**.
 
-## D-011 记忆 ≠ 存储：默认不加载
+## D-011 Memory ≠ storage: default don't load
 
-- **背景**：全量历史自动进上下文会膨胀、污染判断，并且是 prompt injection 的入口。
-- **裁决**：账本 / 视图 / 摘要三分；过程价值 = 未决程度；遗忘留一条痕；**任何东西都不能自己进入上下文**。
-- **后果**：历史是图书馆不是空气；注入在结构上失效（不是靠过滤，是靠没有那条管道）。
-- **关系**：依赖 D-008。
+- **Context**: letting all history into the context bloats it, pollutes judgement, and is the entry point for prompt injection.
+- **Ruling**: split ledger / view / digest; the value of process equals undecidedness; forgetting leaves one trace; **nothing may enter the context on its own**.
+- **Consequences**: history is a library, not the air; injection fails structurally — not by filtering, but because the pipe does not exist.
+- **Relations**: depends on D-008.
 
-## D-012 地图 = 自述的默认视图，且是唯一自动加载例外
+## D-012 The map is the self-report's default view, and the only auto-loaded exception
 
-- **背景**：默认不加载之后，agent 需要知道"能问什么"，否则问不出东西。
-- **裁决**：不新开缝，地图属于自述；地图自动加载，别的一律不许；地图必须一屏放得下，且不缓存（是投影，不是缓存）。
-- **后果**：地图大小成为系统复杂度的硬上限；过期地图被禁止——它会引发"合理但错误"的结论。
-- **关系**：依赖 D-011。
+- **Context**: with default-don't-load, the agent still needs to know what it may ask for, or it can ask nothing.
+- **Ruling**: do not open a new seam; the map belongs to the self-report. The map loads automatically, nothing else may. The map must fit on one screen and must not be cached (it is a projection, not a cache).
+- **Consequences**: the map's size becomes a hard ceiling on system complexity; a stale map is forbidden because it produces reasonable-looking but wrong conclusions.
+- **Relations**: depends on D-011.
 
-## D-013 先定底盘要求，再选型
+## D-013 Fix the substrate requirements first, then choose
 
-- **背景**：直接选 Linux 或非 Linux，会变成先选后找理由。
-- **裁决**：先写七条底盘要求（隔离上界 / 可信启动 / 快照 / 命名空间 / 时钟 / 显示通路 / 最小启动），再反推。
-- **后果**：选型是一道算术题，不是立场。后续被 D-016 与 D-018 修订（七条变六条，且选型已定）。
-- **关系**：被 D-016 / D-018 修订。
+- **Context**: choosing Linux or non-Linux directly degenerates into picking first and finding reasons after.
+- **Ruling**: write the seven substrate requirements first (isolation bounds / measured boot / snapshots / namespaces / clock / display path / minimal boot), then derive.
+- **Consequences**: selection becomes arithmetic rather than a stance. Later revised by D-016 and D-018 (seven became six, and the choice was made).
+- **Relations**: revised by D-016 / D-018.
 
-## D-014 缝这一层：暂缓
+## D-014 The seam layer: deferred
 
-- **背景**：v0.5 把"六条缝"整节删了（认为与四谓词重复），但删完留下一个空位——"一切可换"没有显式挂靠点。
-- **裁决**：暂不恢复，也不重数。等探针跑完，看哪些边界**真的被替换过**再定。
-- **后果**：当前"可替换"缺少显式落点，属已知空位，不是遗漏。
-- **关系**：关联 D-006；复查条件：装包探针产出账本之后。
+- **Context**: v0.5 deleted the whole "six seams" section (it looked redundant with the four predicates), which left a gap — "everything is replaceable" had no explicit attachment point.
+- **Ruling**: neither restore nor re-count. Wait until the probe shows which boundaries are actually replaced.
+- **Consequences**: replaceability currently lacks an explicit anchor. This is a known gap, not an oversight.
+- **Relations**: related to D-006; review trigger: once the "install a package" probe produces a ledger.
 
-## D-015 `/lab` 纳入 git：秘密隔离到 `.machine/`
+## D-015 `/lab` joins git: secrets isolated to `.machine/`
 
-- **背景**：`三棵树三节点统一配置.yaml`（600）、`install-mihomo.sh`、`screenoff` 属于本机环境且含凭据，挡在 git 之前。
-- **裁决**：移入 `/lab/.machine/`，整个目录写进 `.gitignore`；仓库根 = 项目根。
-- **后果**：秘密物理隔离；索引、门禁、上下文永不覆盖该目录。首次提交待定 git 身份。
-- **关系**：支撑 D-011（默认不加载）。
+- **Context**: three local files (a 0600 proxy config, an installer, a screen-off script) belong to the machine, contain credentials, and stood in the way of git.
+- **Ruling**: move them into `/lab/.machine/` and gitignore the whole directory; repository root = project root.
+- **Consequences**: secrets are physically separated; index, gate and context never cover that directory. First commit awaited a git identity (since resolved).
+- **Relations**: supports D-011 (default don't load).
 
-## D-016 底盘走 L1+L2，L3 记为工程债务
+## D-016 Substrate route: L1 + L2, L3 recorded as technical debt
 
-- **背景**：第一性原理要求全部自研，但驱动无法自造。
-- **裁决**：L1 裁剪内核（按本机硬件定制）+ L2 零发行版（自己当 PID 1、不用 systemd/udev、不 mount 通用文件系统、不链 glibc）。L3（内核降为驱动域）暂不做。
-- **后果**：**这是工程上的妥协，不是理念上的让步。** 以后有能力必须做到 L3，本条不得被读成"永久放弃"。
-- **关系**：修订 D-013。
+- **Context**: first principles demand building everything, but drivers cannot be conjured.
+- **Ruling**: L1 — a trimmed kernel configured for this machine — plus L2 — zero distribution (we are PID 1; no systemd/udev; no general-purpose filesystem mounts; no glibc). L3 (kernel demoted to a driver domain) is not done now.
+- **Consequences**: **this is an engineering compromise, not a concession in principle.** When able, L3 must be done fully; this entry must never be read as "abandoned permanently".
+- **Relations**: revises D-013.
 
-## D-017 纯度看调用面，不看裁剪面
+## D-017 Purity is about the call surface, not the build surface
 
-- **背景**：容易把"把内核剪小"当成"变纯"。
-- **裁决**：编进去但从不调用 = 不影响模型。真正的纪律是：**内核只向我们提供进程、内存、设备三样**；不用 `/proc` 当事实来源、不用 inode 当身份、不依赖 systemd。
-- **后果**：门禁应查"调用了什么"，不是查镜像体积。
-- **关系**：支撑 D-016。
+- **Context**: it is tempting to treat "a smaller kernel build" as "purity".
+- **Ruling**: compiled in but never called is the same as absent. The real discipline: **the kernel gives us processes, memory and devices only** — no `/proc` as a source of fact, no inode as identity, no dependency on systemd.
+- **Consequences**: the gate should check what is called, not how large the image is.
+- **Relations**: supports D-016.
 
-## D-018 块级快照不再是底盘要求
+## D-018 Block-level snapshots are no longer a substrate requirement
 
-- **背景**：原七条里的第 3 条，是把别人的机制当成了自己的需求。
-- **裁决**：不可变性在自有存储里，不在文件系统里。账本之外只剩 `vmlinuz` 与我们的代码，用 A/B 槽就够。
-- **后果**：七条变六条。需要的是**一个不会覆盖的日志**，不是文件系统快照。
-- **关系**：**修订 D-013**。
+- **Context**: item three of the original seven mistook someone else's mechanism for our own requirement.
+- **Ruling**: immutability lives in our own storage, not in the filesystem. Outside the ledger only `vmlinuz` and our code exist, and A/B slots are enough for those.
+- **Consequences**: seven requirements become six. What is needed is **a log that never overwrites**, not a filesystem snapshot.
+- **Relations**: **revises D-013**.
 
-## D-019 `counts` 人写 + agent 可提议
+## D-019 `counts` is human-written; the agent may propose
 
-- **背景**：只人写太重（每个判据都要人动手）；agent 可写则它永远成功。
-- **裁决**：起草与生效分开。agent 可提一条 `counts`，标为 proposal，不生效；人签署才生效。
-- **后果**：人只审核不从零写；提议本身也是一条 claim，可审计。
-- **关系**：细化 D-006 / D-007。
+- **Context**: human-only is too heavy (every criterion needs a human); agent-writable means it always succeeds.
+- **Ruling**: drafting and effect are separate. The agent may submit a `counts` assertion marked as a proposal, which has no effect; a human signature makes it effective.
+- **Consequences**: the human reviews rather than writes from scratch; the proposal is itself an assertion and stays auditable.
+- **Relations**: refines D-006 / D-007.
 
-## D-020 探针：装包 → 发邮件，均在假世界
+## D-020 Probe: install a package, then send an email, both in a fake world
 
-- **背景**：需要最小闭环，又不能弄脏本机（真装包会改 apt 状态）。
-- **裁决**：两步。第一步"装包"跑通 read → write → 引用前进 → 回滚；第二步"发邮件"撞 `send` 红线与签字流程。两者都在 `/lab/probe/world/` 这个假世界里，只发真 claim，不做真动作。
-- **后果**：第一个可运行物 = 账本 + 两条投影（"它在干什么" / "等你什么"）。
-- **关系**：无 predecessor。
+- **Context**: a minimal closed loop is needed, without dirtying the machine (a real install changes apt state).
+- **Ruling**: two steps. First "install a package", running read → write → reference advance → rollback. Then "send an email", hitting the `send` red line and the signature flow. Both in a fake world under `/lab/probe/world/`: real assertions, no real actions.
+- **Consequences**: the first runnable artefact is a ledger plus two projections ("what it is doing" / "what it needs from you").
+- **Relations**: no predecessor.
 
-## D-021 第一方件清单：暂缓
+## D-021 Reference implementation list: deferred
 
-- **背景**：8–10 件全自研会拖到半年后才第一次开机，与"尽早用眼睛否决方向"冲突。
-- **裁决**：暂不定件数。让探针把"真正必需的"暴露出来。
-- **后果**：暂时不承诺任何件数；对外表述用"默认件"而非"核心件"。
-- **关系**：关联 D-016；复查条件：装包 + 发邮件两个探针完成后。
+- **Context**: building all 8–10 pieces in-house delays the first boot by months, colliding with "use your eyes to veto the direction early".
+- **Ruling**: do not fix the count yet. Let the probe reveal what is genuinely required.
+- **Consequences**: no committed component count; outward wording uses "reference implementation", never "core component".
+- **Relations**: related to D-016; review trigger: after both probes (install, send).
 
-## D-022 地图预算：暂缓
+## D-022 Map budget: deferred
 
-- **背景**："一屏"是人看还是 agent 读，决定上限由谁定。
-- **裁决**：暂不定数字。倾向上限由人定（人是宪法），但先看地图真实长度。
-- **后果**：暂无硬上限，门禁暂不检查地图体积。
-- **关系**：关联 D-012；复查条件：探针产出第一版地图后。
+- **Context**: whether "one screen" is the human reading or the agent reading decides who sets the limit.
+- **Ruling**: no number yet. The inclination is that the human sets it (the human is the constitution), but first see how long the map actually is.
+- **Consequences**: no hard ceiling yet; the gate does not check map size.
+- **Relations**: related to D-012; review trigger: once the probe produces a first map.
 
-## D-023 许可：GPL-3.0-only + CLA + 商标 + CC BY-4.0
+## D-023 License: GPL-3.0-only + CLA + trademark + CC BY-4.0
 
-- **背景**：目标同时是"成为标准/正统"与"有人出钱买我"。曾倾向卡商用（PolyForm NC / BSL），但那与标准形成直接冲突——**收费会阻止采用**。
-- **裁决**：代码 GPL-3.0-only（商用免费、改了必须公开）；文档 CC BY-4.0（署名为唯一义务）；"TonyOS"名称保留（`TRADEMARK.md`）；外部贡献需签 CLA（含再许可权，`CLA.md`）。选 `-only` 不选 `-or-later`：保留对将来许可证的决定权。
-- **后果**：放弃全部许可费。护城河转移到商标、官方构建、参考实现地位。CLA 保留双授权与"卖位置"的可能；以后可单向放松为 DCO 并作为公关动作。**许可对已发布版本不可收回。**
-- **关系**：取代"卡商用"的早期倾向（未成条）；对应林纳斯路线（GPL + 不收费 + 靠控制权而非收费）。
+- **Context**: the goals are simultaneously "become the standard / the orthodox one" and "someone eventually buys me". The earlier inclination was to block commercial use (PolyForm NC / BSL), but that collides directly with standard formation — **charging prevents adoption**.
+- **Ruling**: code GPL-3.0-only (commercial use free; modifications must be published); docs CC BY-4.0 (credit is the only obligation); the name "TonyOS" is reserved (`TRADEMARK.md`); outside contributions require a CLA with a relicensing grant (`CLA.md`). Chose `-only` over `-or-later` to keep the decision about future licence versions.
+- **Consequences**: all licence revenue is given up. The moat moves to the trademark, official builds, and the position of reference implementation. The CLA preserves the options of dual licensing and of "selling the position"; it can later be relaxed to DCO as a goodwill move. **A licence cannot be retracted for published versions.**
+- **Relations**: supersedes the earlier "block commercial use" inclination (never formalised); follows the Linus route — GPL, no fees, control through copyleft and trademark rather than price.
+
+## D-024 Vocabulary aligned with established terminology
+
+- **Context**: several coined terms had exact equivalents in the literature (truth maintenance systems, saga/compensation, CQRS, XACML, policy-as-code), forcing every reader to translate mentally.
+- **Ruling**: use the standard term for the *mechanism*; keep the image for the *concept* where no standard term exists.
+  - code: `assertion` / `justification` / `retraction`; `audit trail`; `reference implementation`; `technical debt`; `need-to-know`; `policy compiler`; `non-compensatable action`; `policy enforcement point`.
+  - kept: `counts-as`, `no-go zone`, `the map`, `the Screen`, `seam`.
+- **Consequences**: the public vocabulary changes at v0.7. The Chinese originals remain in git history (commit `f8d5d38`), so nothing is lost.
+- **Relations**: refines D-006.

@@ -1,86 +1,86 @@
-# TonyOS — 项目入口协议
+# TonyOS — entry protocol
 
-> 这台机器（`tonyos-dev`）就是实验床。项目目标：**一个 agent-native 的最小发行版**。
-> 本文件是地图，不是手册。每轮先读它；它只放结构、边界、指针。
+> This machine (`tonyos-dev`) is the testbed. The project goal: **an agent-native minimal distribution**.
+> This file is a map, not a manual. Read it first every session; it holds only structure, boundaries and pointers.
 
-## 一屏现状（≤12 行）
+## Current state (≤12 lines)
 
-- 阶段：**设计**（尚未写代码）
-- 已定：理念（主体换位 / 人是宪法）、基（四个谓词）、禁地模型、可逆公理、记忆与上下文规则
-- 未定：底盘选型、`counts` 治理、第一方件清单
-- 未开始：那屏原型、探针原型、v0 一键装/一键滚回
-- 下一步：一个探针原型，把四谓词写成能跑的账本
+- Phase: **design** (no code yet)
+- Settled: the thesis (the agent is the owner / the human is the constitution), the base (four predicates), no-go zones, the axiom of reversibility, memory and context rules, the license
+- Open: the seam layer, reference implementation list, map budget
+- Not started: the Screen prototype, the probe, v0 install/rollback
+- Next: a probe — write the four predicates as a running ledger, starting with "install a package"
 
-## 一进来读什么
+## Read these three
 
-1. 本文件（结构 / 边界 / 路由）
-2. `design/FOUNDATION.md` —— **唯一设计权威**
-3. `docs/STATUS.md` —— 现在在哪、卡在哪、待裁什么
+1. This file (structure / boundaries / routing)
+2. `design/FOUNDATION.md` — **the single source of design authority**
+3. `docs/STATUS.md` — where we are, what is blocked, what needs a ruling
 
-只读这三件就该能开工。读不懂，说明落盘写虚了。
+Reading only these three should be enough to start work. If it isn't, the writing is too vague.
 
-## 目录
+## Layout
 
-| 路径 | 是什么 | 文档类型 |
+| Path | What it is | Doc type |
 |---|---|---|
-| `AGENTS.md` | 入口协议（本文件） | 参考 |
-| `design/FOUNDATION.md` | 设计权威：基与全部推导 | 解释 |
-| `docs/STATUS.md` | 现状与待裁 | 参考 |
-| `docs/DECISIONS.md` | 决策账（append-only，含取代链） | 解释 |
-| `docs/JOURNAL.md` | 工作流水（一行一天） | 参考 |
-| `docs/INDEX.tsv` | 全仓索引（生成物，勿手改） | 参考 |
-| `README.txt` | 实验床分区与引导方式（机器事实） | 参考 |
-| `README.md` | 人读的项目简介（对外） | 教程 |
-| `LICENSING.md` | 代码/文档/名字三者的许可分法 | 参考 |
-| `TRADEMARK.md` | 名称与官方构建的规则 | 参考 |
-| `CLA.md` | 外部贡献者需签的协议 | 参考 |
-| `tools/index.sh` | 生成索引 | 操作 |
-| `tools/check.sh` | 门禁 | 操作 |
+| `AGENTS.md` | Entry protocol (this file) | Reference |
+| `design/FOUNDATION.md` | Design authority: the base and all derivations | Explanation |
+| `docs/STATUS.md` | Current state and open rulings | Reference |
+| `docs/DECISIONS.md` | Decision log (append-only, with supersession chains) | Explanation |
+| `docs/JOURNAL.md` | Work log (one line per day) | Reference |
+| `docs/INDEX.tsv` | Repository index (generated, do not edit) | Reference |
+| `README.txt` | Testbed partitions and boot method (machine facts) | Reference |
+| `README.md` | Human-facing introduction | Tutorial |
+| `LICENSING.md` | How code, docs and name are licensed | Reference |
+| `TRADEMARK.md` | Rules for the name and official builds | Reference |
+| `CLA.md` | Contributor License Agreement | Reference |
+| `tools/index.sh` | Generate the index | How-to |
+| `tools/check.sh` | The gate | How-to |
 
-## 怎么跑
+## How to run
 
-现在没有可运行代码，只有门禁：
+There is no runnable code yet, only the gate:
 
 ```bash
-tools/index.sh     # 重新生成 docs/INDEX.tsv
-tools/check.sh     # 门禁：断链 / 索引过期 / 状态字段 / 决策账字段
+tools/index.sh     # regenerate docs/INDEX.tsv
+tools/check.sh     # gate: broken pointers / stale index / status fields / decision fields
 ```
 
-退出码 0 = 结构没坏。红了先修结构，不要急着写内容。
+Exit code 0 means the structure is intact. If it is red, fix the structure before writing content.
 
-## 怎么验
+## How to verify
 
-- 门禁绿。
-- **接手验证**：只读上面三件，能答出四问——现在在干什么 / 卡在哪 / 下一步最该做什么 / 做这件事先读哪个文件。
+- The gate is green.
+- **Handoff check**: reading only the three files above, answer four questions — what are we doing / what is blocking / what is the next concrete step / which file do I read first to do it.
 
-## 别碰什么
+## Do not touch
 
-- `.machine/`：本机网络环境（mihomo 安装脚本、熄屏脚本、三棵树三节点配置），**不属于本项目**，含凭据，已 gitignore。不改、不进索引、不读进上下文。
-- `lost+found/`：文件系统自己的，不要动。
-- `/dev/sda3`（SLOT-A）、`/dev/sda4`（SLOT-B）：实验分区，**未挂载是刻意的**。挂载或格式化前，先在 `docs/DECISIONS.md` 留一条。
-- 不改 GRUB / efibootmgr 来测试任何东西，除非用"一次性 bootnext + 硬重启自动回退"那套。
-- 不在本机跑本地大模型（2 核 / 3.7G）。
+- `.machine/`: local network environment (mihomo installer, screen-off script, proxy config). **Not part of this project**, contains credentials, already gitignored. Do not modify, index, or load into context.
+- `lost+found/`: owned by the filesystem.
+- `/dev/sda3` (SLOT-A), `/dev/sda4` (SLOT-B): experiment slots, **left unmounted on purpose**. Record a decision in `docs/DECISIONS.md` before mounting or formatting either one.
+- Do not test anything by editing GRUB / efibootmgr, unless using the one-shot bootnext + hard-reboot fallback.
+- Do not run local large models on this machine (2 cores / 3.7 GB).
 
-## 去哪问
+## Where to ask
 
-| 问题 | 去哪 |
+| Question | Where |
 |---|---|
-| 为什么这么设计 / 词表为什么是四个 | `design/FOUNDATION.md` |
-| 某条决策什么时候定的、被谁推翻 | `docs/DECISIONS.md` |
-| 现在该做什么 | `docs/STATUS.md` |
-| 这台机器怎么分区、怎么引导 | `README.txt` |
-| 某个文件在哪 | `docs/INDEX.tsv` |
+| Why is it designed this way / why four predicates | `design/FOUNDATION.md` |
+| When was a decision made, what replaced it | `docs/DECISIONS.md` |
+| What should I do now | `docs/STATUS.md` |
+| How is this machine partitioned, how does it boot | `README.txt` |
+| Where is a file | `docs/INDEX.tsv` |
 
-## 硬规矩（要违反，先写一条 DECISION）
+## Hard rules (to break one, first write a DECISION)
 
-1. **词表封闭**：新需求必须翻译成 `is` / `did` / `may` / `counts` 之一。翻不过来，说明它该去默认件，不该进核。
-2. **不许新增"层"**：加功能只能是加观察者、加 claim、加投影。
-3. **设计先于代码**：FOUNDATION 没定的东西，不许用代码偷偷定。
-4. **不删旧文**：被推翻的标"已被取代"并留反向指针。
-5. **每条判断写得出推翻条件**；写不出的是口号，不收。
-6. **默认不加载**：除地图外，任何东西不得自动进入上下文。
+1. **Closed vocabulary**: any new requirement must translate into one of `is` / `did` / `may` / `counts`. If it cannot, it belongs in a reference implementation, not in the core.
+2. **No new layers**: functionality may only be added as an observer, an assertion, or a projection.
+3. **Design before code**: anything not settled in FOUNDATION must not be quietly settled in code.
+4. **Never delete old text**: mark it superseded and leave a back-pointer.
+5. **Every judgement must state what would refute it.** If you cannot, it is a slogan — rejected.
+6. **Default: don't load**: except for the map, nothing may enter the context on its own.
 
-## 许可（一句话）
+## License (one line)
 
-代码 GPL-3.0-only，文档 CC BY-4.0，名字保留。商用免费，改了要公开，用理念要署名。
-细节见 `LICENSING.md`；要贡献先看 `CLA.md`。
+Code GPL-3.0-only, docs CC BY-4.0, name reserved. Commercial use is free; modifications must be published; using the ideas requires credit.
+Details in `LICENSING.md`; contributors read `CLA.md` first.

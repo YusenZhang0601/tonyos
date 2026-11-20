@@ -1,45 +1,45 @@
-# 贡献者许可协议（CLA）
+# Contributor License Agreement (CLA)
 
-> 本文本为项目自拟的简式协议，不是法律意见。重大贡献前建议自行做法律审查。
+> Drafted for this project; not legal advice. For substantial contributions, seek your own legal review.
 
-签署本协议，表示你（下称"贡献者"）就你向本项目提交的任何贡献（代码、文档、设计、示例，下称"贡献"）同意以下条款。
+By signing this agreement you ("the contributor") agree to the following regarding any contribution (code, documentation, design, examples — "the contribution") you submit to this project.
 
-## 1. 版权许可
+## 1. Copyright licence
 
-贡献者保留其贡献的版权，同时授予项目版权持有人一项**永久、全球、非独占、免版税、不可撤销**的许可，允许其：
+The contributor retains copyright in the contribution, and grants the project's copyright holder a **perpetual, worldwide, non-exclusive, royalty-free, irrevocable** licence to:
 
-- 复制、修改、分发、公开传播该贡献；
-- **以任何条款再许可**该贡献，包括专有条款与商业条款；
-- 将上述权利转授给第三方（含项目受让方）。
+- copy, modify, distribute and publicly communicate the contribution;
+- **sublicence it under any terms**, including proprietary and commercial terms;
+- transfer the above rights to a third party (including a successor to the project).
 
-## 2. 专利许可
+## 2. Patent licence
 
-贡献者授予项目版权持有人及其下游使用者一项永久、全球、非独占、免版税、不可撤销的专利许可，用以制造、使用、销售、许诺销售、进口及以其他方式处置该贡献所必然涉及的专利权利要求。
+The contributor grants the project's copyright holder and downstream users a perpetual, worldwide, non-exclusive, royalty-free, irrevocable patent licence to make, use, sell, offer for sale, import and otherwise dispose of the contribution's necessarily-infringed patent claims.
 
-若贡献者就本项目或其贡献提起专利诉讼（主张本项目侵犯其专利），本条授予的专利许可自起诉之日起终止。
+If the contributor brings a patent suit against this project or its contribution (alleging that the project infringes their patent), the patent licence granted here terminates as of the filing date.
 
-## 3. 陈述与保证
+## 3. Representations
 
-贡献者声明：
+The contributor represents that:
 
-- 每项贡献均为其原创，或已获得足够授权按本协议提交；
-- 贡献中如含第三方材料，已在提交时明确标注来源与许可；
-- 贡献不包含其无权许可的内容，也不故意包含他人的商业秘密。
+- each contribution is their original work, or they hold sufficient rights to submit it under this agreement;
+- any third-party material in the contribution is clearly marked with its source and licence at submission time;
+- the contribution contains nothing they have no right to license, and does not knowingly contain anyone's trade secrets.
 
-## 4. 无担保
+## 4. No warranty
 
-贡献按"现状"提供，不附带任何明示或默示担保。
+Contributions are provided "as is", without warranty of any kind, express or implied.
 
-## 5. 如何签署
+## 5. How to sign
 
-在本仓库 `CONTRIBUTORS.md` 中追加一行：
+Append a line to `CONTRIBUTORS.md` in this repository:
 
 ```
-- 姓名或 ID <邮箱> — 同意 CLA（YYYY-MM-DD）
+- Name or handle <email> — agrees to the CLA (YYYY-MM-DD)
 ```
 
-随 Pull Request 一起提交，即视为签署。签署记录随仓库历史永久留存。
+Submit it with your pull request. That constitutes signature. The record persists in the repository history permanently.
 
-## 6. 记录
+## 6. Records
 
-项目维护者保留所有签署记录。撤回签署不影响撤回之前已授予的许可。
+The maintainer keeps all signature records. Withdrawing a signature does not affect licences already granted before the withdrawal.
