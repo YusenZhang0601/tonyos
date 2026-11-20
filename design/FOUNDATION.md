@@ -503,7 +503,7 @@ The executor is an ordinary userspace process, not a kernel module: it must chan
 
 Serialise with a fixed format (CBOR or a fixed binary layout); never put `#[repr(C)]` structs on the wire. Only then is "changing the language" possible — and whether the language can be changed is the first real test of whether the ABI is implementation-neutral at all.
 
-Rust was chosen for longevity and for memory safety at the enforcement point. Cost accepted: compiling Rust on this 2-core machine is painful, so heavy builds may move to the workstation — which collides with the existing "no heavy builds on this machine" preference and must be resolved when the core starts.
+Rust was chosen for longevity and for memory safety at the enforcement point. Cost accepted: compiling Rust on this 2-core machine is painful, so **heavy builds go to the borrowed compile machines** (AGENTS.md). That resolves the earlier collision with "no heavy builds on this machine": the testbed stays the testbed. Borrowed means borrowed — they run other people's work, so load is checked first, jobs are capped and time-boxed. A WSL build produces a Linux binary; it does not test boot, which stays on this machine.
 
 ---
 

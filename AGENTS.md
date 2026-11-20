@@ -45,7 +45,7 @@ Reading only these three should be enough to start work. If it isn't, the writin
 
 ## How to run
 
-There is no runnable code yet, only the gate:
+The probe is runnable; the system is not. The gate:
 
 ```bash
 tools/index.sh     # regenerate docs/INDEX.tsv
@@ -97,3 +97,21 @@ Exit code 0 means the structure is intact. If it is red, fix the structure befor
 
 Code GPL-3.0-only, docs CC BY-4.0, name reserved. Commercial use is free; modifications must be published; using the ideas requires credit.
 Details in `LICENSING.md`; contributors read `CLA.md` first.
+
+
+## Borrowed machines (local only)
+
+Heavy builds may be delegated to **borrowed** machines, because this testbed is
+2 cores / 3.7 GB. Their names, addresses and SSH configuration live in a
+gitignored local directory and **must never be indexed, quoted or published**.
+
+The rules, because they are borrowed and run other people's work:
+
+1. Confirm the environment first (distribution, toolchain, source path).
+2. Check the load. If the machine is busy, wait or choose another.
+3. Cap the build (`-j` below the core count) and time-box it.
+4. Do not install or upgrade toolchains without asking.
+5. Leave nothing running, and clean scratch output afterwards.
+
+A build on a borrowed machine is a build, not a verification: boot and block
+device tests happen on this machine.

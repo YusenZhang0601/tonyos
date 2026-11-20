@@ -21,6 +21,9 @@ mkdir -p "$(dirname "$out")"
     find tools -maxdepth 1 -type f -name '*.sh'
   } | sed 's|^\./||' | sort -u | while IFS= read -r f; do
     [ -f "$f" ] || continue
+    # Anything gitignored is local, not part of the repository. Indexing it would
+    # put a path in a tracked file that a clone does not have.
+    if git check-ignore -q "$f"; then continue; fi
     printf '%s\t%s\t%s\t%s\n' \
       "$f" \
       "$(sha256sum "$f" | cut -c1-12)" \
