@@ -121,7 +121,10 @@ def main():
     rule = ledger.append(HUMAN, "counts", {"form": "satisfaction", "scope": PKG,
                                            "test": "every file present, bytes identical"},
                          "*", by=HUMAN, because=[v0])
-    send_rule = next(c["id"] for c in ledger.visible(v0)
+    # The fixture reads back the rule it just wrote. v0 predates it, so asking
+    # v0 for it is the S1 defect (a slice at seq 3 must not contain seq 4-6).
+    # The fixture may read the ledger; a projection may not (D-031).
+    send_rule = next(c["id"] for c in ledger.rows
                      if c["predicate"] == "may" and c["value"]["verb"] == "send")
 
     # world 1: install

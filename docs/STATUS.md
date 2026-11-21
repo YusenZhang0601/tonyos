@@ -4,7 +4,7 @@
 
 ## Phase
 
-Design, plus a nine-pass probe (base at v0.16; no system yet)
+Design, plus a ten-pass probe (base at v0.16; no system yet)
 
 ## Working on
 
@@ -16,10 +16,12 @@ are the ones that make it a brain — identity, intention, and anything about th
 A also found two defects in the slice itself: global claims ignore the viewpoint's position,
 and a retracted viewpoint is absent from its own slice. Evidence: `probe/README.md` pass 9.
 
-**Handoff:** pass B0 (make the slice true) is running; the six gaps need rulings before B.
+**Handoff:** pass B0 (make the slice true) is done: global claims are not retroactive and a
+viewpoint is in its own slice — `probe/README.md` pass 10. The six gaps still need rulings
+before B.
 The leader's recommended answers are recorded in the goal file and marked not applied.
 
-Compressing "agent-native OS" from first principles into an executable base. Second round of rulings is on record: the substrate goes L1+L2 (L3 recorded as technical debt), `counts` is human-written with agent proposals, the probe has nine passes, the licence is settled.
+Compressing "agent-native OS" from first principles into an executable base. Second round of rulings is on record: the substrate goes L1+L2 (L3 recorded as technical debt), `counts` is human-written with agent proposals, the probe has ten passes, the licence is settled.
 
 ## Blocked
 
@@ -98,5 +100,5 @@ The success test: **if one real event cannot be written in four predicates withi
 - No system yet; the probe is the only executable thing (`python3 probe/demo.py`)
 - Retraction: `did` is an event and cannot be retracted; `is` / `may` / `counts` are
   beliefs and reach a fixpoint, cached per ledger state (D-041)
-- Probe: nine passes, seven executable experiments (`demo`, `crash`, `concurrent`,
+- Probe: ten passes, seven executable experiments (`demo`, `crash`, `concurrent`,
   `group`, `cost`, `index`, `retract`)

@@ -566,9 +566,17 @@ class Ledger:
             parent = self.get(origin)
             world, cutoff = parent["world"], parent["seq"]
         live = self.active()
-        return [row for row in live
-                if row["world"] == "*"
-                or any(row["world"] == w and row["seq"] <= cutoff for w, cutoff in windows)]
+        out = [row for row in live
+               # A global claim is not retroactive: the viewpoint pins the moment
+               # for `*` too (S1). Only the branch is unpinned, not the position.
+               if (row["world"] == "*" and row["seq"] <= root["seq"])
+               or any(row["world"] == w and row["seq"] <= cutoff for w, cutoff in windows)]
+        if root["id"] not in {row["id"] for row in out}:
+            # A viewpoint is always in its own slice, even when a later claim
+            # retracted it (S2): otherwise it cannot reproduce its own screen.
+            # Its position is the largest cut-off, so appending keeps seq order.
+            out.append(root)
+        return out
 
     def reload(self):
         """Refresh this view by reading only the new tail. Never truncates."""

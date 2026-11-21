@@ -1,6 +1,6 @@
 # The probe
 
-Nine passes. **Its job is to be wrong**, so the design stops being self-validating.
+Ten passes. **Its job is to be wrong**, so the design stops being self-validating.
 
 ```bash
 python3 probe/demo.py
@@ -597,6 +597,9 @@ S1 and S2 are the same question seen twice: **what does a viewpoint pin?** D-031
 branch, the moment and the tree". For `*` it pins the branch and the tree; for retracted
 claims it pins neither the moment nor itself. Reported with reproduction; not patched.
 
+**Superseded (pass 10, 2026-11-21):** both defects are patched below. The reproductions
+above are kept as the before evidence; the fix and its after evidence are pass 10.
+
 ### What pass 9 taught
 
 **A · The vocabulary describes a world and its rules, and has almost nothing to say about
@@ -638,6 +641,228 @@ questions that fail are the three that make it a *brain* rather than a work log.
   for presence, not for readability.
 - **Nothing is rendered, measured, or timed.** Passes B and C remain unstarted by design.
 
+## Pass 10 — the slice is true before anything is drawn
+
+Pass B0 of stage 3, and the first code in it. Pass 9 left two defects in `visible()` with
+reproductions and no patch (S1, S2). This pass fixes exactly those two and proves it. The
+on-disk format, the write path, `active()`'s fixpoint and every projection in `demo.py` are
+unchanged.
+
+### The reproduction, rebuilt independently
+
+The fixture is `probe/demo.py` with its state redirected. The audit asks every root two
+questions: does its own slice contain itself, and does the slice contain any claim written
+after it. "Before" is the committed code at `9a517c1`, produced by copying `probe/*.py` to a
+scratch directory, restoring `ledger.py` and `demo.py` from that commit, and running the
+same audit.
+
+```
+--- every root against its own slice
+  world:lab      vp seq= 3  rows= 8  self_in_slice=True  claims_after_vp=[4, 5, 6, 7, 16]
+  world:lab      vp seq= 9  rows=10  self_in_slice=True  claims_after_vp=[16]
+  world:lab      vp seq=12  rows=12  self_in_slice=True  claims_after_vp=[16]
+  world:lab      vp seq=14  rows=14  self_in_slice=True  claims_after_vp=[16]
+  world:lab      vp seq=17  rows=15  self_in_slice=False claims_after_vp=[]
+  world:sandbox  vp seq=20  rows=12  self_in_slice=True  claims_after_vp=[]
+  world:sandbox  vp seq=21  rows=13  self_in_slice=True  claims_after_vp=[]
+  world:lab      vp seq=22  rows=17  self_in_slice=True  claims_after_vp=[]
+roots whose own slice omits them : [17]
+roots whose slice contains later : [(3, [4, 5, 6, 7, 16]), (9, [16]), (12, [16]), (14, [16])]
+
+--- the early viewpoint (world:lab @ seq 3)
+  seqs in slice: [1, 2, 3, 4, 5, 6, 7, 16]
+  may rules    : [(4, {'mode': 'allow', 'verb': 'read'}), (5, {'mode': 'allow', 'verb': 'write'}), (6, {'mode': 'require', 'verb': 'send'})]
+  approvals    : [(1, 'bootstrap'), (16, '963bba95a1590350')]
+
+--- the retracted viewpoint (world:lab @ seq 17)
+  in final active set: False
+  in its own slice   : False
+```
+
+### The fix
+
+Two conditions in `visible()`, and nothing else in the read path:
+
+```python
+        live = self.active()
+        out = [row for row in live
+               # A global claim is not retroactive: the viewpoint pins the moment
+               # for `*` too (S1). Only the branch is unpinned, not the position.
+               if (row["world"] == "*" and row["seq"] <= root["seq"])
+               or any(row["world"] == w and row["seq"] <= cutoff for w, cutoff in windows)]
+        if root["id"] not in {row["id"] for row in out}:
+            # A viewpoint is always in its own slice, even when a later claim
+            # retracted it (S2): otherwise it cannot reproduce its own screen.
+            # Its position is the largest cut-off, so appending keeps seq order.
+            out.append(root)
+        return out
+```
+
+S1 is the `row["seq"] <= root["seq"]` filter on `*`. S2 is the append: a claim can only
+enter the comprehension through `live`, so the viewpoint has to be re-added after the
+filter, and it is added only when the slice would otherwise omit it. `active()` is not
+touched, so nothing here decides whether a retracted root *is* active; the slice simply
+always names its own viewpoint.
+
+### After
+
+```
+fixture verification:
+  W1 after rollback        visible=17 doing={"installed": false, "writes": 1} needs=[]
+  approval one-shot: denied→sent→denied : True
+  expired approval rejected              : True
+  fork sees the ancestor's claims       : True
+  sibling does not see the fork's work  : True
+  rollback in W1 leaves W2 intact       : True
+  W1 after rollback is empty            : True
+  W2 does not see W1's later rollback   : True
+  global rules visible in both worlds   : True
+
+  world          vp  rows  self  claims_after_vp
+  world:lab       3    3  True  []
+  world:lab       9    9  True  []
+  world:lab      12   11  True  []
+  world:lab      14   13  True  []
+  world:lab      17   16  True  []
+  world:sandbox  20   12  True  []
+  world:sandbox  21   13  True  []
+  world:lab      22   17  True  []
+
+  early viewpoint, world:lab @ 3 — seqs in slice: [1, 2, 3]
+  may rules    : []
+  approvals    : [(1, 'bootstrap')]
+
+  retracted viewpoint, world:lab @ 17 — in its own slice: True
+  tree in its slice : {"files": {"/etc/htoprc": "fields=1", "/usr/bin/htop": "ELF"}}
+  tree it names     : {"files": {"/etc/htoprc": "fields=1", "/usr/bin/htop": "ELF"}}
+  its screen is its own: True
+
+  still open: seq 11 (active at v2, retracted later) in the v2 slice: False
+```
+
+The early screen now has no permissions and no approval: at seq 3 the human had granted
+nothing, and "world:lab @ 3" is true. The retracted seq-17 viewpoint renders its own tree,
+so a historical screenshot can be reproduced from the slice it pins.
+
+The reproduction, including the after table:
+
+```
+$ python3 - <<'PY'
+import contextlib, io, json, os, shutil, sys
+sys.path.insert(0, "probe")
+import demo
+from ledger import Ledger
+
+STATE = "/tmp/opencode/passB0/fixture"
+shutil.rmtree(STATE, ignore_errors=True); os.makedirs(STATE)
+demo.STATE = STATE
+buf = io.StringIO()
+with contextlib.redirect_stdout(buf):
+    demo.main()                                  # the fixture, unmodified
+
+led = Ledger(os.path.join(STATE, "claims.jsonl"), writable=False)
+roots = [r for r in led.rows if led._is_root_row(r)]
+print("fixture verification:")
+for line in buf.getvalue().splitlines():
+    if line.startswith(("approval", "expired", "fork sees", "sibling", "rollback in",
+                        "W1 after", "W2 does", "global rules")):
+        print("  " + line)
+
+print("\n  world          vp  rows  self  claims_after_vp")
+for r in roots:
+    s = led.visible(r["id"])
+    ids = {c["id"] for c in s}
+    print(f"  {r['world']:<14} {r['seq']:>2}  {len(s):>3}  {str(r['id'] in ids):<5} "
+          f"{[c['seq'] for c in s if c['seq'] > r['seq']]}")
+
+early = next(r for r in roots if r["seq"] == 3)
+mid = next(r for r in roots if r["seq"] == 12)
+late = next(r for r in roots if r["seq"] == 17)
+e = led.visible(early["id"])
+print("\n  early viewpoint, world:lab @ 3 — seqs in slice:", [c["seq"] for c in e])
+print("  may rules    :", [(c["seq"], c["value"]["mode"], c["value"]["verb"])
+                           for c in e if c["predicate"] == "may"])
+print("  approvals    :", [(c["seq"], c["value"].get("approves")) for c in e
+                           if c["predicate"] == "counts" and "approves" in c["value"]])
+
+s17 = led.visible(late["id"])
+own = next(c for c in s17 if c["id"] == late["id"])
+print("\n  retracted viewpoint, world:lab @ 17 — in its own slice:",
+      any(c["id"] == late["id"] for c in s17))
+print("  tree in its slice :", json.dumps(own["value"]["root"], sort_keys=True))
+print("  tree it names     :", json.dumps(late["value"]["root"], sort_keys=True))
+print("  its screen is its own:", own["value"]["root"] == late["value"]["root"])
+
+print("\n  still open: seq 11 (active at v2, retracted later) in the v2 slice:",
+      11 in [c["seq"] for c in led.visible(mid["id"])])
+PY
+  ... (the output is the two blocks above) ...
+```
+
+### What the fix cost
+
+**The fixture was using the bug.** `demo.py` located the `send` rule by asking
+`visible(v0)` — a slice at seq 3 — for a rule written at seq 6. That is S1 itself, so the
+fixed `visible()` raised `StopIteration` before any assertion ran. One fixture-setup line
+now reads the rule from the ledger, which a fixture may; a projection still may not:
+
+```diff
+-    send_rule = next(c["id"] for c in ledger.visible(v0)
++    send_rule = next(c["id"] for c in ledger.rows
+                      if c["predicate"] == "may" and c["value"]["verb"] == "send")
+```
+
+No assertion was weakened or removed. The demo still prints 8/8 `True`. What changed is
+the printed screens, because they were reading the future before: `W1 installed` goes from
+`visible=10 needs=[]` to `visible=9 needs=['send']` (at seq 9 no approval exists yet — this
+is the correct answer, and it is the panel-2 contradiction pass 9 reported), and `W2 before
+fork` goes from `visible=8` to `visible=3` (at the seed, nothing has been granted).
+
+The six experiments, rerun after the fix:
+
+```
+demo 8/8 True · crash: 2 of 5 recovered, checksum refuses the flipped byte
+concurrent: exactly one winner per round 5/5, loser forks, fork sees parent not winner
+index: 500 operations, 43 worlds, 835 claims, 0 mismatches; rebuild 0 mismatches
+retract: four graphs match the subset oracle; a did cannot be retracted
+cost: locked and group at 1/8/32 writers all ran; group 32 was 731 commits/s this run
+```
+
+### What pass 10 taught
+
+**A · `*` is not retroactive.** A viewpoint pins the moment for `may` / `counts` as well as
+for the world. What `*` leaves unpinned is the branch, not the position. A seq-3 screen
+with seq-6 permissions on it was a screen lying about when it was taken — the same silent
+class as pass 3's ancestry bug, but in the global half of the slice.
+
+**B · A viewpoint is in its own slice, and that is weaker than "it is active".** Adding
+the viewpoint claim back does not revive it, does not change `active()`, and does not make
+any other retracted claim visible. It restores exactly what a historical screen needs: the
+root that pins the tree and the moment. Whether a retracted root counts as active is still
+not decided, and this fix does not need it.
+
+**C · A fixture can depend on a defect.** The demo's rule lookup was a one-line consequence
+of S1, and it was invisible until the fix. The probe's own setup was reading a future slice,
+so "demo still 8/8" was never evidence that the slice was true. The new pass-10 audit is
+the check that actually asks the slice.
+
+**D · This is not an as-of query.** Activity is still the final fixpoint. Seq 11 was active
+at v2 and is retracted later by the send at seq 13, so it is absent from v2's slice — before
+and after this fix. S2's narrow form puts back the viewpoint only. G3 (a spent approval in
+no slice) and a full "as of seq N" membership rule would need activity computed at the
+position, and that is a ruling, not this defect.
+
+### What pass 10 does not test
+
+- **`*` across a fork.** A global claim written after the fork but before the child's
+  viewpoint is now visible in the child (its seq is ≤ the child viewpoint's seq). Whether
+  `*` should also stop at the fork point is not settled by D-031 or D-035; nothing here
+  decides it. The fixture has one such claim (the seq-16 approval) and the child at seq 20
+  does see it.
+- **Performance.** `visible()` is still a filter over `active()`, and `active()` is still
+  the whole log. Pass 10 changes the predicate, not the cost; no timing was taken.
+- **A screen.** Nothing is rendered. B0 only makes the slice that B will receive true.
+
 ## Still untested
 
 **The Screen.** Four projections exist as functions; nothing renders them. Pass 9 is the
@@ -662,3 +887,5 @@ content-addressed storage, not a booted system.
    event list has no entry for a rollback the human performed (pass 9, G4).
 9. May `is` carry an intention, and is a self-report a claim the agent may write?
    Panel 3 asks for "what it intends" and the vocabulary has no shape for it (pass 9, G5).
+10. Does `*` stop at a fork? A global claim written after the fork but before the child's
+    viewpoint is visible in the child (pass 10). Not settled by D-031 or D-035.
