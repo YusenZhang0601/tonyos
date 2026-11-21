@@ -5,7 +5,7 @@
 
 ## Current state (≤12 lines)
 
-- Phase: **design**, with an eight-pass probe (Python). No system yet.
+- Phase: **design**, with a nine-pass probe (Python). No system yet.
 - Settled: the thesis (the agent is the owner / the human is the constitution), the base (four predicates), no-go zones, the axiom of reversibility, memory and context rules, events vs beliefs, the license
 - Open: reference implementation list, map budget, `tick`, `*` for sensor facts, performance floors
 - Not started: the Screen, v0 install/rollback, the real storage engine and boot

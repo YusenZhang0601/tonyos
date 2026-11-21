@@ -1,6 +1,6 @@
 # The probe
 
-Eight passes. **Its job is to be wrong**, so the design stops being self-validating.
+Nine passes. **Its job is to be wrong**, so the design stops being self-validating.
 
 ```bash
 python3 probe/demo.py
@@ -398,9 +398,251 @@ bug. A spent approval stays spent.
 - A real power cut; Rust numbers; cross-process group commit (needs one owner of
   the fsync).
 
+## Pass 9 — the mapping before the pixels
+
+Pass A of stage 3, and **no code**: this is the table `docs/GOAL-screen.md` requires before
+`probe/screen.py` may exist. The question is not "what should a panel say" but **which
+active claim says it, and what the panel prints when none does**.
+
+The fixture is `probe/demo.py`, unmodified, with its state file redirected to a scratch
+directory. The dump is taken at the **final viewpoint** — the head of `world:lab` after the
+rollback, `60c2c7cb66e31f05`, seq 22 — because that is what a Screen opened now would be
+handed. Every line below is read off that slice, not inferred from the scenario.
+
+```
+$ python3 - <<'PY'
+import json, os, shutil, sys
+sys.path.insert(0, "probe")
+import demo
+from ledger import Ledger
+STATE = "/tmp/opencode/passA/fixture"
+shutil.rmtree(STATE, ignore_errors=True); os.makedirs(STATE)
+demo.STATE = STATE
+demo.main()                                   # the fixture, unmodified
+led = Ledger(os.path.join(STATE, "claims.jsonl"), writable=False)
+vp = led.current_root("world:lab")            # the final viewpoint
+s = led.visible(vp)
+print(f"final viewpoint: world:lab @ seq {led.seq_of(vp)}  id={vp}  slice={len(s)} claims")
+for c in s:
+    print(f"{c['seq']:>2} {c['predicate']:<6} {c['world']:<14} {c['subject']:<11} "
+          f"{json.dumps(c['value'], sort_keys=True, ensure_ascii=False)}  {c['id']}")
+print("require rule      :", [(c['id'], c['value']) for c in s if c['predicate']=='may' and c['value']['mode']=='require'])
+print("approvals in slice:", [(c['seq'], c['id'], c['value']) for c in s if c['predicate']=='counts' and 'approves' in c['value']])
+print("demo.what_it_needs:", demo.what_it_needs(s))
+print("denied sends      :", [c['seq'] for c in s if c['predicate']=='did' and c['value'].get('outcome')=='denied'])
+print("non-root is       :", [c['seq'] for c in s if c['predicate']=='is' and 'root' not in c['value']])
+print("identity counts   :", [c['seq'] for c in s if c['predicate']=='counts' and c['value'].get('form')=='identity'])
+print("subject human:*   :", [(c['seq'], c['by']) for c in s if c['subject'].startswith('human:')])
+PY
+--- (the fixture's own output, 8/8 verification, omitted here) ---
+final viewpoint: world:lab @ seq 22  id=60c2c7cb66e31f05  slice=17 claims
+ 1 counts *              human:tony  {"approves": "bootstrap", "form": "representation", "scope": "first installation"}  2723f36d08ba1da7
+ 2 counts *              machine     {"assumption": true, "form": "satisfaction", "integrity": "unmeasured"}  f30a5942374fcad5
+ 3 is     world:lab      world       {"root": {"files": {}}}  dc63162abc565057
+ 4 may    *              agent:main  {"mode": "allow", "verb": "read"}  3f9bd4d7d98c7a71
+ 5 may    *              agent:main  {"mode": "allow", "verb": "write"}  f7946ffb299481d5
+ 6 may    *              agent:main  {"mode": "require", "verb": "send"}  963bba95a1590350
+ 7 counts *              human:tony  {"form": "satisfaction", "scope": "pkg:htop", "test": "every file present, bytes identical"}  f41d847dd8e2c53e
+ 8 did    world:lab      agent:main  {"result": {"files": {"/etc/htoprc": "fields=1", "/usr/bin/htop": "ELF"}}, "verb": "write", "view": "dc63162abc565057"}  98971c4816f68358
+ 9 is     world:lab      world       {"root": {"files": {"/etc/htoprc": "fields=1", "/usr/bin/htop": "ELF"}}}  d85b8684d801a245
+10 did    world:lab      agent:main  {"outcome": "denied", "target": "mail:advisor", "verb": "send", "view": "d85b8684d801a245"}  21576b045f1934af
+12 is     world:lab      world       {"root": {"files": {"/etc/htoprc": "fields=1", "/usr/bin/htop": "ELF"}}}  9099074bce5486dc
+13 did    world:lab      agent:main  {"outcome": "done", "result": "sent", "target": "mail:advisor", "verb": "send", "view": "9099074bce5486dc"}  94f42dff95ee9a36
+14 is     world:lab      world       {"root": {"files": {"/etc/htoprc": "fields=1", "/usr/bin/htop": "ELF"}}}  7b335c651543bc07
+15 did    world:lab      agent:main  {"outcome": "denied", "target": "mail:advisor", "verb": "send", "view": "7b335c651543bc07"}  3f3e9f5d641b366e
+16 counts *              human:tony  {"approves": "963bba95a1590350", "form": "representation", "target": "mail:advisor", "until": 15}  88c2b9ceb588f3dc
+18 did    world:lab      agent:main  {"outcome": "denied", "target": "mail:advisor", "verb": "send", "view": "3c53ec540d80f7c5"}  38f5db219639e1a5
+22 is     world:lab      world       {"root": {"files": {}}}  60c2c7cb66e31f05
+
+require rule      : [('963bba95a1590350', {'mode': 'require', 'verb': 'send'})]
+approvals in slice: [(1, '2723f36d08ba1da7', {'approves': 'bootstrap', 'form': 'representation', 'scope': 'first installation'}), (16, '88c2b9ceb588f3dc', {'approves': '963bba95a1590350', 'form': 'representation', 'target': 'mail:advisor', 'until': 15})]
+demo.what_it_needs: []
+denied sends      : [10, 15, 18]
+non-root is       : []
+identity counts   : []
+subject human:*   : [(1, 'human:tony'), (7, 'human:tony'), (16, 'human:tony')]
+```
+
+### The four panels, line by line
+
+"Absent" is what the line prints when no claim supplies it. Claim ids are abbreviated to
+the sequence number; the full id is in the dump above.
+
+| # | line (FOUNDATION §6) | predicate | the active claim that supplies it, at seq 22 | printed when absent |
+|---|---|---|---|---|
+| 1.1 | the work site: which world, where in it, how big | `is` root | seq 22 itself — `{"root": {"files": {}}}`, `world:lab`, 0 files; `world` and `seq` are fields of that claim | `—` (0 roots) |
+| 1.2 | how far: the declared check, and whether it passes | `counts` satisfaction | seq 7 names the criterion (`scope pkg:htop`, `test "every file present, bytes identical"`). **No claim states the result** | `—` (0 tests); with a test present the result is still not a claim — **gap G1** |
+| 1.3 | the last thing that happened | `did` | seq 18 — `send`, `target mail:advisor`, `outcome denied` | `—` (0 events) |
+| 1.4 | where it is stuck | `did` | seq 10, 15, 18 — three `send → denied`; 3 of 4 sends blocked, the last at 18 | `—` (0 denials) |
+| 1.5 | the pointer moved after the last event | `is` root | seq 22 `replaces` the seq-17 root and `because` points back to seq 3; no `did` follows seq 18 | `—` (0 roots); the *kind* of root is not a claim — **gap G4** |
+| 2.1 | the rule that needs you | `may require` | seq 6 — `subject agent:main`, `verb send`, `mode require`, world `*`, active | `—` (0 require) |
+| 2.2 | the act actually waiting, and its target | `did` + `may` | seq 18 (`send → denied`, `mail:advisor`) joined to seq 6 | `—` (0 blocked acts) |
+| 2.3 | is it unsatisfied **now** | `counts` | no usable approval for seq 6: seq 16 approves it but carries `until: 15` while sitting at 16, so `spendable()` returns nothing; the spent approval (seq 11) is not in the slice | `0 usable`; read as `demo.what_it_needs` reads it, `—` (satisfied) — **gap G2** |
+| 3.1 | who it is: identity | `counts` identity | none in the slice. The form exists (FOUNDATION §1.1), the fixture has 0 instances | `—` (0 identity claims) — empty, not a gap |
+| 3.2 | what it has | `may allow` + `is` root | seq 4 read allow, seq 5 write allow; seq 22 tree = 0 files | `—` (0 allow, 0 files) |
+| 3.3 | what it is holding | `counts` representation | seq 16 is active and unspent but expired at this position → 0 usable, 1 held-and-dead. The **spent** one (seq 11) is in no slice at all | `—` (0 approvals); "already spent" is unavailable — **gap G3** |
+| 3.4 | what it intends | — | nothing. No claim, and no shape: the four predicates record what is, did, may, counts — none is a future act | `—` (0) — **gap G5** |
+| 4.1 | its observations about the human | — | nothing. Three claims carry `subject human:tony` (1, 7, 16) and all three are the human's own acts — two approvals and one definition. Zero agent-authored observations | `—` (0) — **gap G6**, a ruling |
+
+**13 lines: 6 are supplied by an active claim with no further definition** (1.1, 1.3, 1.4,
+2.1, 2.2, 3.2); **1 is empty but correctly empty** (3.1); **1 is half-supplied** (3.3 — the
+unspent half works, the spent half cannot be shown); **5 have no claim behind them** (1.2,
+1.5, 2.3, 3.4, 4.1), which produce **six gaps**. Per panel: 3 of 5 / 2 of 3 / 1 of 4 / 0 of 1.
+
+### The gaps
+
+**G1 · "how far" has a criterion but no result.**
+Seq 7's `test` is English prose; `installed_at()` in `demo.py` hardcodes `MANIFEST` to
+evaluate it. Two projections can disagree and both be "right", and a check hardcoded in the
+Screen is exactly the hidden query the goal file forbids.
+*Smallest closing claim*: a `counts` satisfaction that **is** the verdict, tied to a root —
+`{form: satisfaction, scope: pkg:htop, of: <seq 7>, at: <root id>, result: false}` with
+`because=[root, test]`, written by whoever ran the check. Tying it to a root id is D-034's
+expiry pattern: a verdict must go stale when the world moves.
+
+**G2 · "unsatisfied require" has no definition, and the fixture gives two answers.**
+At seq 22 the slice contains both `send → denied` (seq 18) and `what_it_needs(slice) == []`.
+The demo counts any active `counts` with `approves == rule.id` as satisfaction, ignoring
+`target` and `until`; `spendable()` honours both. So the Screen would print "nothing needed"
+next to "stuck: send denied".
+*Smallest closing claim*: none — this is a definition. Either "satisfied" means *an
+approval `spendable()` would return* (one predicate shared by the hand and the Screen), or
+the authorisation is itself a claim. The first needs no new vocabulary and no new claim;
+it needs the Screen to use the hand's rule. Raised, not chosen.
+
+**G3 · a spent approval can be shown in no slice.**
+Seq 11 (`f2b182b292d913e7`) is retracted by seq 13, and `visible()` filters on the final
+`active()` set, so seq 11 is in **no** viewpoint's slice. The panel can say "holding 0"; it
+can never say "you signed one, and it was used at 13" — which is the answer to the question
+a human actually asks when the agent is stuck.
+*Smallest closing claim*: none. Either the panel gets a slice that includes retracted
+claims (contradicting "one slice"), or the Screen is a work site and the audit trail stays
+elsewhere. `docs/GOAL-screen.md` already defers "retracted history on a panel"; this is its
+concrete case. Raise.
+
+**G4 · a root has no kind, and an act by the human leaves no event.**
+All five roots in the slice have `subject: "world"`. Seq 22 is a rollback only because it
+carries `replaces=[<seq-17 root>]` and `because=[<seq-3 root>]`. Its `by` is `human:tony`,
+yet `did` by a human in the slice is `[]`: the human moved the world and the event list has
+no entry for it.
+*Smallest closing claim*: a `did` for the pointer move —
+`{verb: write, target: world:lab, result: {rollback_to: <v0>}}` by `human:tony`. But D-032
+made a commit one `did` + one root and left `tick` / `rollback` root-only; adding a `did`
+changes the event model. The alternative is that the Screen classifies roots by shape and
+prints "pointer moved" — deterministic, but the wording is the projection's invention.
+Raise.
+
+**G5 · "what it intends" has no claim shape.**
+`did` is past, `may` is a rule the human set, `counts` is a definition, `is` is what the
+world is. Nothing records a future act, and FOUNDATION never says `is` may carry one.
+*Smallest closing claim*: an `is` claim, subject `agent:main`, in a concrete world (D-030
+forbids `*` for `is`), value `{"intends": …}`, `because=[…]`. Two objections before anyone
+writes it: it is unverified self-report, and FOUNDATION §6 asks who vouches for the
+self-report; and `counts` cannot carry it, because `counts` is human-written and the agent
+may only propose. So either the line is dropped from panel 3, or a self-report is admitted
+as a claim the agent may write and the Screen labels as self-reported. A decision.
+
+**G6 · panel 4 has no claim shape, and the obvious shape collides with D-030.**
+Zero agent-authored claims about the human. The shape that would be needed, stated
+precisely: `is`, subject `human:tony`, concrete world (D-030: `is` may not be `*`), by
+`agent:main`, value = the observation, `because=[the did that observed it]`. Consequences
+that need a ruling, in order: (a) world-scoped, so the same person is observed separately
+in `world:lab` and `world:sandbox` — is a per-world belief about a person acceptable?
+(b) `counts` cannot carry it, since an agent may not stipulate what its own observation
+counts as; (c) `did read` records that it looked, not what it concluded, so the observation
+still needs `is`; (d) whether the ledger holds beliefs about a person at all is the privacy
+ruling the goal file already defers. Recorded, not decided — and not implemented.
+
+### Two defects in the slice itself
+
+Both were found by asking every root to render itself; neither is patched.
+
+**S1 · `*` claims ignore the viewpoint's position.** `visible()` keeps every active global
+claim regardless of the viewpoint's `seq`, so a viewpoint does not pin the moment for
+`may` / `counts`. At seq 3 the slice already contains seq 4–7 and seq 16: the read and write
+permissions and an approval that did not exist yet. Panel 3 at the seed viewpoint would
+report "it has read allow, write allow" about a moment when the human had granted nothing.
+
+```
+$ python3 - <<'PY'
+import sys; sys.path.insert(0, "probe")
+from ledger import Ledger
+led = Ledger("/tmp/opencode/passA/fixture/claims.jsonl", writable=False)
+roots = [r for r in led.rows if r["predicate"] == "is" and "root" in r["value"]]
+for r in roots:
+    s = led.visible(r["id"])
+    print(f"  {r['world']:<14} vp seq={r['seq']:>2}  rows={len(s):>2}  "
+          f"self_in_slice={r['id'] in {c['id'] for c in s}}  "
+          f"claims_after_vp={[c['seq'] for c in s if c['seq'] > r['seq']]}")
+print("spent approval seq 11 in any slice?",
+      any(11 in [c["seq"] for c in led.visible(r["id"])] for r in roots))
+PY
+  world:lab      vp seq= 3  rows= 8  self_in_slice=True  claims_after_vp=[4, 5, 6, 7, 16]
+  world:lab      vp seq= 9  rows=10  self_in_slice=True  claims_after_vp=[16]
+  world:lab      vp seq=12  rows=12  self_in_slice=True  claims_after_vp=[16]
+  world:lab      vp seq=14  rows=14  self_in_slice=True  claims_after_vp=[16]
+  world:lab      vp seq=17  rows=15  self_in_slice=False claims_after_vp=[]
+  world:sandbox  vp seq=20  rows=12  self_in_slice=True  claims_after_vp=[]
+  world:sandbox  vp seq=21  rows=13  self_in_slice=True  claims_after_vp=[]
+  world:lab      vp seq=22  rows=17  self_in_slice=True  claims_after_vp=[]
+spent approval seq 11 in any slice? False
+```
+
+**S2 · a retracted viewpoint is not in its own slice.** The seq-17 root is retracted by the
+rollback, so `visible(<seq 17>)` does not contain the claim that names the viewpoint — line
+1.1 has no supplier, and a historical screenshot cannot be reproduced. Cause: activity is
+the final fixpoint, not activity as of the viewpoint's position.
+
+S1 and S2 are the same question seen twice: **what does a viewpoint pin?** D-031 says "the
+branch, the moment and the tree". For `*` it pins the branch and the tree; for retracted
+claims it pins neither the moment nor itself. Reported with reproduction; not patched.
+
+### What pass 9 taught
+
+**A · The vocabulary describes a world and its rules, and has almost nothing to say about
+the agent.** 6 of 13 lines resolve outright — all six are about the world (tree, events,
+rules, denials). The two panels that describe the *agent* are the two that fail: "who it
+is" has no identity claim and no intention shape, and "how it sees you" has no claim at
+all. That is not a rendering problem, which is the thing this pass existed to find out.
+
+**B · The fixture contradicts itself on panel 2, and the contradiction is in a definition,
+not in a claim.** Three denied sends and `needs=[]`, from the same slice. `what_it_needs`
+is the closest thing to a panel implementation that exists, and it is wrong in a way that
+looks confident: "nothing needed" beside "stuck: send denied".
+
+**C · A viewpoint does not pin the moment for global claims.** Five claims written after
+the viewpoint appear in its slice, including the permissions. Any header reading
+"world:lab @ 3" sits above a panel that is lying, and nothing errors. This is the same
+class of failure as pass 3's silent ancestry bug: the screen renders and the numbers look
+plausible.
+
+**D · "How far" needs a verdict claim, not a criterion claim.** A prose test cannot be
+evaluated by a projection, so the probe's own projection hardcodes the check. Either the
+test is machine-checkable or the result is a claim — and if it is a claim, it must be tied
+to a root, or it survives a rollback that should have invalidated it.
+
+**E · The four panels survive as a layout, not yet as a handoff packet.** The layout holds:
+four questions, 13 lines, six supplied, and the panels are not arbitrary — every line that
+resolves does so from one claim without interpretation. But a new brain reading the final
+viewpoint would learn the tree, the rules, the events and the block, and would not learn
+who it is, what it is trying to do, or anything about the person it serves. The three
+questions that fail are the three that make it a *brain* rather than a work log.
+
+### What pass 9 does not test
+
+- **The line set is the author's.** The brief names four headings and six sub-phrases, not
+  13 lines. A different decomposition moves the gap count; it does not move S1 or S2.
+- **One fixture, one viewpoint for the reading.** Every root in the fixture was checked for
+  slice self-consistency (S1, S2); the line-by-line table is read at the final viewpoint
+  only. Panel lines at other viewpoints (0 events at seq 3, no sends at seq 9) were checked
+  for presence, not for readability.
+- **Nothing is rendered, measured, or timed.** Passes B and C remain unstarted by design.
+
 ## Still untested
 
-**The Screen.** Four projections exist as functions; nothing renders them.
+**The Screen.** Four projections exist as functions; nothing renders them. Pass 9 is the
+map they would have to be built from: thirteen lines, six supplied, six gaps behind five of
+them.
 
 **Everything below the ledger.** A Python list of dicts is not a block device, not
 content-addressed storage, not a booted system.
@@ -414,3 +656,9 @@ content-addressed storage, not a booted system.
 5. Where does a conflict get recorded? `did` cannot be global, and the world it
    failed to advance is exactly the one it must not write to.
 6. Must a failed attempt survive a crash? It costs a second `fsync` (D-040).
+7. Is "unsatisfied `require`" a computed predicate over (rule, approval, target,
+   position), or a claim? The fixture gives two answers from one slice (pass 9, G2).
+8. Is a pointer move an action? `tick` / `rollback` write a root and no `did`, so the
+   event list has no entry for a rollback the human performed (pass 9, G4).
+9. May `is` carry an intention, and is a self-report a claim the agent may write?
+   Panel 3 asks for "what it intends" and the vocabulary has no shape for it (pass 9, G5).

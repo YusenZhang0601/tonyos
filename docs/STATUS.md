@@ -4,7 +4,7 @@
 
 ## Phase
 
-Design, plus an eight-pass probe (base at v0.16; no system yet)
+Design, plus a nine-pass probe (base at v0.16; no system yet)
 
 ## Working on
 
@@ -17,7 +17,7 @@ filled with prose.
 **Handoff:** the goal file is the whole brief; a fresh agent needs it plus the three
 entry files. Stage 2 is closed and green, the tree is clean, and pass A starts from it.
 
-Compressing "agent-native OS" from first principles into an executable base. Second round of rulings is on record: the substrate goes L1+L2 (L3 recorded as technical debt), `counts` is human-written with agent proposals, the probe has eight passes, the licence is settled.
+Compressing "agent-native OS" from first principles into an executable base. Second round of rulings is on record: the substrate goes L1+L2 (L3 recorded as technical debt), `counts` is human-written with agent proposals, the probe has nine passes, the licence is settled.
 
 ## Blocked
 
@@ -91,5 +91,5 @@ The success test: **if one real event cannot be written in four predicates withi
 - No system yet; the probe is the only executable thing (`python3 probe/demo.py`)
 - Retraction: `did` is an event and cannot be retracted; `is` / `may` / `counts` are
   beliefs and reach a fixpoint, cached per ledger state (D-041)
-- Probe: eight passes, seven executable experiments (`demo`, `crash`, `concurrent`,
+- Probe: nine passes, seven executable experiments (`demo`, `crash`, `concurrent`,
   `group`, `cost`, `index`, `retract`)
