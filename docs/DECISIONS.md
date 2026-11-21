@@ -323,3 +323,60 @@ Overturned entries are **never deleted**: they are marked "superseded by D-0xx",
 - **Consequences**: D-034 is safe — the send's `did` retracts the approval, and because the `did` cannot be retracted, the approval cannot come back. `active()` is no longer a single pass; it is cached per ledger state, because `visible()` uses it and the Screen will call it often. The head index already keeps the write path off `active()`.
 - **Falsifier**: a legitimate need to withdraw a `did` (a sensor logged a reading that never happened) would make this rule wrong. The answer would be a later event that supersedes it in the projection, not a retraction.
 - **Relations**: resolves the pass-8 finding; refines D-034; depends on D-006.
+
+## D-042 A global claim is not retroactive, and a fork does not snapshot it
+
+- **Context**: B0. `visible()` pinned the moment for world claims but not for `*`: a seq-3 viewpoint carried the seq-4/5 permissions and a seq-16 approval, so an early screen reported boundaries the human had not yet drawn. After the fix a second case appeared — a `*` claim written after a fork but before the child's own position is visible in the child (seq 16 in the sandbox's seq-20 slice). D-031 says a viewpoint pins the branch, the moment and the tree; D-035 says a child sees the parent up to the fork point. Neither settled `*`.
+- **Ruling**:
+  1. A `*` claim is visible at every viewpoint whose position is at or after the claim's own position. One total order, no exception for globals.
+  2. **A fork does not snapshot the constitution.** A child keeps receiving `*` claims as they are signed, because a boundary is not state. D-035's cut-off is about the parent's *world* claims only.
+  3. A viewpoint is always in its own slice, even after a later claim retracted it; otherwise a historical viewpoint cannot reproduce its own screen.
+- **Consequences**: a rule signed after a fork governs the child from then on — forking cannot escape a new no-go zone, which is what a ring is for. Every historical slice shrinks: seq 3 goes from 8 claims to 3. The demo's `W1 installed` screen had been reading a permission written after its viewpoint; it now reports `needs=['send']`, which is correct at seq 9 and is exactly pass 9's panel-2 contradiction.
+- **Falsifier**: a world that must keep operating under the rules it was born with — a replayed run, a deliberate freeze. That need is served by an as-of query rather than a fork; if an as-of query cannot serve it, this rule is wrong.
+- **Relations**: implements D-031's "pins the moment"; refines D-035; depends on D-030; from probe pass 9 (S1/S2) via pass 10.
+
+## D-043 A projection may not add semantics
+
+- **Context**: pass 9 (G1, G2, G4). Three places where a view supplied meaning that no claim carries. `what_it_needs()` re-derived "satisfied" with a weaker rule than the hand's `spendable()` — ignoring `target` and `until` — so one slice printed "nothing needed" beside "stuck: send denied". `installed_at()` evaluated a prose `counts` test by hardcoding the manifest, so the verdict existed only as code. A rollback root carries no kind, so a panel printing "rolled back" would infer it from `replaces` and `because`.
+- **Ruling**:
+  1. **One definition per term.** If the hand decides "satisfied" by `spendable()`, the view calls the same function. A view may not carry a second rule.
+  2. **No conclusion that no claim states.** A verdict — did the test pass — must be a claim: a `did`, verb `read`, naming the test and the root it was run at. The verdict is then an event, and it goes visibly stale when the world moves.
+  3. **No name that no claim carries.** A root is shown by its mechanism (`replaces`, `because`), never by a verb the projection inferred.
+- **Consequences**: panel 2 shows the act that was blocked and why, not a standing list of requirements — a `require` never expires, so a list would be a permanent demand. `what_it_needs()` must either be corrected to `spendable()` or deleted: a view that disagrees with the hand is worse than no view. Cost: the Screen is sometimes less helpful than a clever deduction. That is what is being bought — every line traces to a claim, or to a definition the hand also uses.
+- **Falsifier**: a human need that only a deduction can serve, such as "is the machine healthy" while integrity is unmeasured (D-033). If the claim cannot be written and the panel is useless without the deduction, the rule is too strict.
+- **Relations**: implements D-031 (a projection gets a slice, not the ledger); follows D-034's position-based expiry and D-041's event/belief split; resolves pass 9 G1, G2, G4; constrains every future projection.
+
+## D-044 Intention is a belief the agent may hold, and it needs a vouching chain
+
+- **Context**: pass 9 (G5). Panel 3 asks "what it intends". The four predicates have no future tense: `did` is past, `may` is the human's rule, `counts` is the human's stipulation, `is` is what the world is. Pass 9 found zero claims of any shape, and "how far" (panel 1) has no goal to measure against without one.
+- **Ruling**:
+  1. An intention is `is`, subject `agent:main`, in a concrete world (`is` may not be `*`, D-030).
+  2. It is a belief: retractable and replaceable. A retracted intention is not a lie (D-041).
+  3. §6's vouching applies literally: `because` must bottom out at a human signature or a sensor. An intention that cites nothing does not enter a projection.
+  4. **An intention binds nothing.** A `may` is still required for the act; "it intends to send" is not a permission and may not be read as one.
+- **Consequences**: the agent can be shown with a direction, and the direction can be compared with the last `did` — which is what panel 1 means by "how far". Cost: self-reports can be wrong, and the vouching chain becomes a real constraint on every agent rather than a formality.
+- **Falsifier**: an intention used to launder a permission ("it intends to send, so sending is expected"), or two active intentions in one world with no way to surface the conflict. Either one means the shape needs a guard.
+- **Relations**: implements FOUNDATION §6's vouching; refines D-030 and D-041; resolves pass 9 G5.
+
+## D-045 The Screen is a work site; the past is a query
+
+- **Context**: pass 9 (G3). `active()` is the final fixpoint, so a spent approval (seq 11) is in no viewpoint's slice. A panel can say "holding 0" but never "you signed one and it was spent at 13", which is the question a human asks when the agent is stuck. Widening the slice to include retracted claims would break "one slice, four panels".
+- **Ruling**:
+  1. The four panels show the present at one viewpoint: what is active at that root.
+  2. Retracted claims are not on the Screen. An approval is retracted by the act that spends it (D-034), so it leaves the panel at the moment it is used.
+  3. The audit question — what was permitted at the time, and who used it — is an as-of query over the log, not a panel.
+  4. When the Screen must explain a block, it shows the act and its outcome, not the history of the signature.
+- **Consequences**: the four panels are deliberately not a complete account of the past. Cost: a human asking "why did it not send?" sees the denial and must query for the chain. Kept because a Screen that carries audit becomes a report, and FOUNDATION §6 rejects a report.
+- **Falsifier**: the human routinely needing the spent signature to decide the next thing. Then the panel is the wrong place and this rule is what should change.
+- **Relations**: depends on D-034 and D-041; refines D-031; resolves pass 9 G3; consistent with CORE §5 ("back to yesterday" is an as-of query).
+
+## D-046 Panel 4 shows what the human gave, not what the agent believes about them
+
+- **Context**: pass 9 (G6). Panel 4 is "how it sees you — its observations about the human". The ledger holds zero agent-authored claims about a human; the three human-subject claims are the human's own acts. The obvious shape exists (`is`, subject `human:x`, by the agent, concrete world), but it would accumulate per-world beliefs about a person, written by the agent, with no way to check their truth.
+- **Ruling**:
+  1. Panel 4 prints the human's own acts as the agent holds them — their `may`, their `counts`, their approvals — labelled "what it has from you".
+  2. **The agent does not write claims whose subject is a human** until the owner rules otherwise.
+  3. If the need appears, it is raised as a ruling with the exact shape, the world it lives in, and who may read it.
+- **Consequences**: panel 4 is honest but weak — it reports the constitution, not an opinion — and the Screen loses its one "empathy" line for now. D-030's per-world rule would make the same person observed separately in each world, which is an argument for waiting rather than for a quick shape.
+- **Falsifier**: an agent that cannot serve the human without recording an observation about them. Then the shape is designed deliberately instead of accreting.
+- **Relations**: refines D-001 and D-002 (the human is the constitution); depends on D-030; resolves pass 9 G6.

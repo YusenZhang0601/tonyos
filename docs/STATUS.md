@@ -8,18 +8,15 @@ Design, plus a ten-pass probe (base at v0.16; no system yet)
 
 ## Working on
 
-**Stage 3 open: [`docs/GOAL-screen.md`](GOAL-screen.md) — the Screen. Pass A is done, and
-it changed the shape of the stage.** The four panels survive as a layout, not yet as a
-handoff packet: of 13 lines, 6 resolve from one active claim with no interpretation, 1 is
-correctly empty, 1 is half, and 5 have no claim behind them. The three questions that fail
-are the ones that make it a brain — identity, intention, and anything about the human. Pass
-A also found two defects in the slice itself: global claims ignore the viewpoint's position,
-and a retracted viewpoint is absent from its own slice. Evidence: `probe/README.md` pass 9.
+**Stage 3 open: [`docs/GOAL-screen.md`](GOAL-screen.md) — the Screen.** Pass A changed the
+shape of the stage: of 13 lines, 6 resolve from one active claim, 1 is correctly empty, 1 is
+half, and 5 had nothing behind them. The three questions that failed are the ones that make
+a brain rather than a work log — identity, intention, and anything about the human (pass 9).
+Pass B0 then made the slice true: global claims are not retroactive and a viewpoint is in its
+own slice (D-042, pass 10). The six gaps are ruled (D-043…D-046); none is implemented.
 
-**Handoff:** pass B0 (make the slice true) is done: global claims are not retroactive and a
-viewpoint is in its own slice — `probe/README.md` pass 10. The six gaps still need rulings
-before B.
-The leader's recommended answers are recorded in the goal file and marked not applied.
+**Handoff:** pass B, the render. `probe/screen.py` does not exist yet, nothing is
+half-finished, the gate is green.
 
 Compressing "agent-native OS" from first principles into an executable base. Second round of rulings is on record: the substrate goes L1+L2 (L3 recorded as technical debt), `counts` is human-written with agent proposals, the probe has ten passes, the licence is settled.
 
@@ -82,16 +79,14 @@ The success test: **if one real event cannot be written in four predicates withi
   indexing on disk is undesigned.
 - **`visible()` is O(n).** The Screen will call it; whether it needs its own index is
   open.
-- **The panels' six gaps** (pass 9): G1 a verdict claim for "how far"; G2 one definition of
-  "unsatisfied `require`" (the fixture prints both answers from one slice); G3 a spent
-  approval is in no slice; G4 a root has no kind; G5 the vocabulary has no shape for
-  intention; G6 whether the ledger may hold beliefs about a person. Recommendations are in
-  the goal file; none is applied.
+- **The panels' six gaps** (pass 9): ruled in D-043…D-046 — no semantics added by a
+  projection, intention as a vouched belief, the Screen as a work site, panel 4 as what the
+  human gave. None is implemented; pass B is where the shapes meet code.
 
 ## Health
 
 - Design authority: `design/FOUNDATION.md` v0.16
-- Decision log: `docs/DECISIONS.md` D-001 … D-041 (3 supersession chains)
+- Decision log: `docs/DECISIONS.md` D-001 … D-046 (3 supersession chains)
 - Implementation: Rust core, Python probe; ABI carries no language types (D-027)
 - Agents: external, one ABI + N thin adapters, MCP is an adapter only (D-028)
 - Gate: `tools/check.sh` (structure)

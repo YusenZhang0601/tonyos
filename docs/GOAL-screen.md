@@ -1,6 +1,7 @@
 # Goal: the Screen
 
-> **Status: open** (2026-11-21). Four passes; pass A is analysis only, no code.
+> **Status: open** (2026-11-21). **A met** (`probe/README.md` pass 9), **B0 met** (pass 10,
+> D-042). The six gaps are ruled (D-043…D-046); B is next.
 > Previous stage: [`GOAL-head-index.md`](GOAL-head-index.md) — met.
 
 > A bounded stage. When every item below is verified, the stage is over. A new rule is
@@ -87,10 +88,11 @@ Each step leaves the previous green. Do not parallelise.
 - touching `.machine/` or `编译试验机/`, or putting machine details into git
 - another session's uncommitted changes in `/lab`
 
-## Recommended answers (raised, awaiting the owner)
+## The answers (adopted)
 
-Pass 9 produced six gaps. These are the leader's recommendations, on record so they are
-not re-litigated from memory. **None is applied.**
+Pass 9 produced six gaps. The owner adopted all six on 2026-11-21; they are now D-043…D-046,
+and the rationale is kept here so it is not re-litigated from memory. **Ruled, not yet
+implemented** — pass B is where the shapes meet code.
 
 - **G2, "unsatisfied `require`"** — one definition, the hand's: an approval is usable iff
   `spendable()` would return it, `target` and `until` honoured. The Screen must not carry a
