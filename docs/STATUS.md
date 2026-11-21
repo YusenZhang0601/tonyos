@@ -8,15 +8,14 @@ Design, plus an eight-pass probe (base at v0.16; no system yet)
 
 ## Working on
 
-**Stage complete: [`docs/GOAL-head-index.md`](GOAL-head-index.md)** — the head is O(1).
-The measurement refuted half the premise: the locked path was re-reading the whole log
-(24 times per commit at 32 writers), while the head scan was only 0.3 ms. Both are
-fixed; the index's real value was cutting lock hold time, which grew the batch from
-9 to 21. `probe/README.md` pass 8 has the evidence. Awaiting the owner's choice of the
-next stage (three candidates below).
+**Stage 3 open: [`docs/GOAL-screen.md`](GOAL-screen.md) — the Screen.** Four passes: the
+mapping before the pixels (pass A, analysis only) / the render / the cost / the handoff
+test. Pass A is the real test of the vocabulary: every panel line must name the active
+claim that supplies it, and a line with no claim behind it is recorded as a gap, never
+filled with prose.
 
-**Handoff:** all probes are green and the branch is clean. Tomorrow starts by choosing
-one of the three candidates; nothing is half-finished.
+**Handoff:** the goal file is the whole brief; a fresh agent needs it plus the three
+entry files. Stage 2 is closed and green, the tree is clean, and pass A starts from it.
 
 Compressing "agent-native OS" from first principles into an executable base. Second round of rulings is on record: the substrate goes L1+L2 (L3 recorded as technical debt), `counts` is human-written with agent proposals, the probe has eight passes, the licence is settled.
 
@@ -38,11 +37,15 @@ Nothing hard. Every open item is deliberately deferred, not stuck.
    the head in a dict. 500 mixed operations, 0 mismatches against brute force; a fresh
    Ledger rebuilds the same heads. Group commit at 32 writers: 255 → 590-617/s.
 
-**Stage complete. Three candidates for the next stage, in the order I would pick them:**
+**Stage 2 is closed: the head is O(1).** The measurement refuted half its premise — the
+locked path was re-reading the whole log (24 times per commit at 32 writers), while the
+head scan was only 0.3 ms. Both are fixed; the index's real value was cutting lock hold
+time, which grew the batch from 9 to 21. `probe/README.md` pass 8 has the evidence.
 
-1. **The Screen.** The four panels from CORE §6, rendered from projections. It is the
-   first thing a human can use, and the handoff packet for a new brain. It will also
-   force `visible()` to be fast.
+**Stage 3: the Screen** — taken, see the goal file. The other two candidates stay on
+the list, unopened:
+
+1. **The Screen.** ← open; four passes in `docs/GOAL-screen.md`.
 2. **The adapter boundary.** One real host through one thin adapter, against a 10-line
    ABI sketch. It is the first test of "any agent lives here" (D-028).
 3. **The view index and the log owner.** `visible()` still scans every row, the whole
@@ -78,7 +81,7 @@ The success test: **if one real event cannot be written in four predicates withi
 
 ## Health
 
-- Design authority: `design/FOUNDATION.md` v0.15
+- Design authority: `design/FOUNDATION.md` v0.16
 - Decision log: `docs/DECISIONS.md` D-001 … D-041 (3 supersession chains)
 - Implementation: Rust core, Python probe; ABI carries no language types (D-027)
 - Agents: external, one ABI + N thin adapters, MCP is an adapter only (D-028)
