@@ -29,7 +29,8 @@ answer is a claim, or the vocabulary is wrong — never a hidden query.
    pass 9, a table, and no code.
 2. **One slice, four panels.** `screen(ledger, viewpoint)` calls `visible()` exactly
    once and hands each panel nothing but the slice. A panel that can reach the `Ledger`
-   has already broken D-031.
+   has already broken D-031. **And the slice must be true**: nothing written after the
+   viewpoint may appear in it, and the viewpoint itself must be in it (pass 9, S1/S2).
 3. **Empty is empty.** No invented status, no "all good" placeholder, no filler that
    reads like content. An empty panel prints `—` and a count.
 4. **Plain text, zero dependencies.** `probe/screen.py` writes to stdout, 80 columns,
@@ -52,6 +53,12 @@ answer is a claim, or the vocabulary is wrong — never a hidden query.
 - **A. The mapping.** No code. For each of the four panels, list the lines and the claim
   behind each one. Then run the fixture through it and check that every line resolves.
   The gaps found here decide the shape of B; **do not** start B before this table exists.
+- **B0. The slice is correct first.** Pass 9 found two defects in `visible()`: global
+  claims ignore the viewpoint's position (S1), and a retracted viewpoint is absent from
+  its own slice (S2). Both have reproductions in `probe/README.md` pass 9. Fix them under
+  evidence — a historical viewpoint must reproduce its own screen — in **one isolated
+  commit**, so it can be reverted if the owner rules that `*` is retroactive. No other
+  change to the read path.
 - **B. The render.** `probe/screen.py`, one function per panel, slice in, lines out. Fixed
   width. Every panel readable with no prior knowledge of the fixture.
 - **C. The cost.** Count `visible()` calls and full scans per render; time it at three
@@ -79,6 +86,34 @@ Each step leaves the previous green. Do not parallelise.
 - mounting or formatting `/dev/sda3` / `/dev/sda4`
 - touching `.machine/` or `编译试验机/`, or putting machine details into git
 - another session's uncommitted changes in `/lab`
+
+## Recommended answers (raised, awaiting the owner)
+
+Pass 9 produced six gaps. These are the leader's recommendations, on record so they are
+not re-litigated from memory. **None is applied.**
+
+- **G2, "unsatisfied `require`"** — one definition, the hand's: an approval is usable iff
+  `spendable()` would return it, `target` and `until` honoured. The Screen must not carry a
+  second rule. Panel 2 shows **the act that was blocked and why**, never a standing list of
+  requires, because a require never expires. Cost: panel 2 answers "what is stopping it",
+  not "what could it want".
+- **G1, a verdict for "how far"** — a result is an event: `did {verb: read, target: pkg:htop,
+  test: <the counts>, at: <root>, outcome: fail}`. No new predicate, and a verdict tied to a
+  root goes visibly stale when the world moves. Cost: the panel shows the last check, not
+  the truth.
+- **G4, a root has no kind** — no new verb, and no word the projection invented: print the
+  mechanism (`root ← replaces X, because Y`), never "rolled back".
+- **G5, intention** — a belief, so `is`, subject `agent:main`, concrete world, agent-authored,
+  `because` bottoming out at a human signature or a sensor. Retractable, which is correct: a
+  plan that changed is not a lie. Cost: §6's vouching turns into a real constraint on the
+  agent, not a formality.
+- **G6, panel 4** — not yet. Panel 4 prints the human's own acts as the agent holds them
+  (their `may`, their `counts`, their approvals) and labels itself "what it has from you".
+  Agent-authored beliefs about a person wait for the owner's ruling; the panel is honest in
+  the meantime rather than empty.
+- **G3, spent approvals** — the Screen is a **work site**; the audit trail is not a panel.
+  "You signed one and it was spent at 13" is an as-of query, not a line on the Screen. Cost:
+  the four panels are not a complete account of the past, by design.
 
 ## Rules
 

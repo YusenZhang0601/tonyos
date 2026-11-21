@@ -8,14 +8,16 @@ Design, plus a nine-pass probe (base at v0.16; no system yet)
 
 ## Working on
 
-**Stage 3 open: [`docs/GOAL-screen.md`](GOAL-screen.md) — the Screen.** Four passes: the
-mapping before the pixels (pass A, analysis only) / the render / the cost / the handoff
-test. Pass A is the real test of the vocabulary: every panel line must name the active
-claim that supplies it, and a line with no claim behind it is recorded as a gap, never
-filled with prose.
+**Stage 3 open: [`docs/GOAL-screen.md`](GOAL-screen.md) — the Screen. Pass A is done, and
+it changed the shape of the stage.** The four panels survive as a layout, not yet as a
+handoff packet: of 13 lines, 6 resolve from one active claim with no interpretation, 1 is
+correctly empty, 1 is half, and 5 have no claim behind them. The three questions that fail
+are the ones that make it a brain — identity, intention, and anything about the human. Pass
+A also found two defects in the slice itself: global claims ignore the viewpoint's position,
+and a retracted viewpoint is absent from its own slice. Evidence: `probe/README.md` pass 9.
 
-**Handoff:** the goal file is the whole brief; a fresh agent needs it plus the three
-entry files. Stage 2 is closed and green, the tree is clean, and pass A starts from it.
+**Handoff:** pass B0 (make the slice true) is running; the six gaps need rulings before B.
+The leader's recommended answers are recorded in the goal file and marked not applied.
 
 Compressing "agent-native OS" from first principles into an executable base. Second round of rulings is on record: the substrate goes L1+L2 (L3 recorded as technical debt), `counts` is human-written with agent proposals, the probe has nine passes, the licence is settled.
 
@@ -78,6 +80,11 @@ The success test: **if one real event cannot be written in four predicates withi
   indexing on disk is undesigned.
 - **`visible()` is O(n).** The Screen will call it; whether it needs its own index is
   open.
+- **The panels' six gaps** (pass 9): G1 a verdict claim for "how far"; G2 one definition of
+  "unsatisfied `require`" (the fixture prints both answers from one slice); G3 a spent
+  approval is in no slice; G4 a root has no kind; G5 the vocabulary has no shape for
+  intention; G6 whether the ledger may hold beliefs about a person. Recommendations are in
+  the goal file; none is applied.
 
 ## Health
 
